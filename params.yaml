@@ -1,0 +1,16 @@
+data_preprocess:
+  features:
+    - PageValues
+    - ExitRates
+    - ProductRelated
+    - Administrative
+    - BounceRates
+    - ProductRelated_Duration
+    - Administrative_Duration
+    - Month
+    - Informational_Duration
+
+  categorical_features:
+    - Month
+
+

@@ -25,33 +25,66 @@
 # if __name__ == "__main__":
 #     main()
 
+# #CODE FOR TESTING DATA INGESTION
+# import os
+# import pandas as pd
+# from Config import Config
+# from src.data_ingestion import ingest_data
+#
+#
+# # Cleanup before test (in case files exist)
+# train_path = os.path.join(Config.DATA_DIR, Config.TRAIN_DATA_FILE)
+# test_path = os.path.join(Config.DATA_DIR, Config.TEST_DATA_FILE)
+#
+# if os.path.exists(train_path):
+#     os.remove(train_path)
+# if os.path.exists(test_path):
+#     os.remove(test_path)
+#
+# # Act
+# ingest_data()
+#
+# # Assert
+# assert os.path.exists(train_path), "Train file was not created"
+# assert os.path.exists(test_path), "Test file was not created"
+#
+# # Validate content structure (optional)
+# train_df = pd.read_csv(train_path)
+# test_df = pd.read_csv(test_path)
+#
+# assert not train_df.empty, "Train CSV is empty"
+# assert not test_df.empty, "Test CSV is empty"
+# assert train_df.shape[1] == test_df.shape[1], "Mismatch in column count between train and test"
 
+
+#CODE FOR TESTING DATA PREPROCESSING
 import os
-import pandas as pd
 from Config import Config
-from src.data_ingestion import ingest_data
+from src.data_preprocessing import preprocess_data
 
+def test_preprocessing():
+    print("📦 Running preprocessing pipeline...")
+    preprocess_data()
 
-# Cleanup before test (in case files exist)
-train_path = os.path.join(Config.DATA_DIR, Config.TRAIN_DATA_FILE)
-test_path = os.path.join(Config.DATA_DIR, Config.TEST_DATA_FILE)
+    processed_dir = os.path.join(Config.DATA_DIR, Config.PROCESSED_DATA_DIR)
+    expected_files = [
+        "x_train.csv", "x_val.csv", "x_test.csv",
+        "y_train.csv", "y_val.csv", "y_test.csv"
+    ]
 
-if os.path.exists(train_path):
-    os.remove(train_path)
-if os.path.exists(test_path):
-    os.remove(test_path)
+    all_exist = True
+    for file in expected_files:
+        file_path = os.path.join(processed_dir, file)
+        if os.path.exists(file_path):
+            print(f"{file} generated successfully.")
+        else:
+            print(f"{file} is missing!")
+            all_exist = False
 
-# Act
-ingest_data()
+    if all_exist:
+        print("\n Preprocessing completed and all files are present.")
+    else:
+        print("\n️ Preprocessing incomplete. Please check the logs for errors.")
 
-# Assert
-assert os.path.exists(train_path), "Train file was not created"
-assert os.path.exists(test_path), "Test file was not created"
-
-# Validate content structure (optional)
-train_df = pd.read_csv(train_path)
-test_df = pd.read_csv(test_path)
-
-assert not train_df.empty, "Train CSV is empty"
-assert not test_df.empty, "Test CSV is empty"
-assert train_df.shape[1] == test_df.shape[1], "Mismatch in column count between train and test"
+if __name__ == "__main__":
+    test_preprocessing()

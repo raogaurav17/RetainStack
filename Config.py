@@ -19,6 +19,15 @@ class Config:
     TRAIN_TEST_SPLIT_RATIO: float = os.getenv("TRAIN_TEST_SPLIT_RATIO", 0.2)
     TRAIN_VAL_SPLIT_RATIO: float = os.getenv("TRAIN_TEST_SPLIT_RATIO", 0.2)
 
+    ## processed data config
+    PROCESSED_DATA_DIR: str = os.getenv("PROCESS_DATA_DIR", "processed")
+
+
+    # Artifacts config
+    ARTIFACT_DIR: str = os.getenv("MODEL_DIR", "artifact")
+
+
+
 
 
 
