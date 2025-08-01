@@ -57,34 +57,54 @@
 # assert train_df.shape[1] == test_df.shape[1], "Mismatch in column count between train and test"
 
 
-#CODE FOR TESTING DATA PREPROCESSING
+# #CODE FOR TESTING DATA PREPROCESSING
+# import os
+# from Config import Config
+# from src.data_preprocessing import preprocess_data
+#
+# def test_preprocessing():
+#     print("📦 Running preprocessing pipeline...")
+#     preprocess_data()
+#
+#     processed_dir = os.path.join(Config.DATA_DIR, Config.PROCESSED_DATA_DIR)
+#     expected_files = [
+#         "x_train.csv", "x_val.csv", "x_test.csv",
+#         "y_train.csv", "y_val.csv", "y_test.csv"
+#     ]
+#
+#     all_exist = True
+#     for file in expected_files:
+#         file_path = os.path.join(processed_dir, file)
+#         if os.path.exists(file_path):
+#             print(f"{file} generated successfully.")
+#         else:
+#             print(f"{file} is missing!")
+#             all_exist = False
+#
+#     if all_exist:
+#         print("\n Preprocessing completed and all files are present.")
+#     else:
+#         print("\n️ Preprocessing incomplete. Please check the logs for errors.")
+#
+# if __name__ == "__main__":
+#     test_preprocessing()
+
 import os
+from src.train import model_train
 from Config import Config
-from src.data_preprocessing import preprocess_data
+import joblib
+# Training module test
+def test_model_train():
+    # Run training
+    model_train()
 
-def test_preprocessing():
-    print("📦 Running preprocessing pipeline...")
-    preprocess_data()
+    # Check if model was saved
+    model_path = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR, "model.pkl")
+    assert os.path.exists(model_path), "Model file was not saved."
 
-    processed_dir = os.path.join(Config.DATA_DIR, Config.PROCESSED_DATA_DIR)
-    expected_files = [
-        "x_train.csv", "x_val.csv", "x_test.csv",
-        "y_train.csv", "y_val.csv", "y_test.csv"
-    ]
-
-    all_exist = True
-    for file in expected_files:
-        file_path = os.path.join(processed_dir, file)
-        if os.path.exists(file_path):
-            print(f"{file} generated successfully.")
-        else:
-            print(f"{file} is missing!")
-            all_exist = False
-
-    if all_exist:
-        print("\n Preprocessing completed and all files are present.")
-    else:
-        print("\n️ Preprocessing incomplete. Please check the logs for errors.")
+    # Check if it’s a valid model
+    model = joblib.load(model_path)
+    assert hasattr(model, "predict"), "Loaded model does not have 'predict' method."
 
 if __name__ == "__main__":
-    test_preprocessing()
+    test_model_train()
