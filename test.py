@@ -89,22 +89,49 @@
 # if __name__ == "__main__":
 #     test_preprocessing()
 
+# # Training module test
+# import os
+# from src.train import model_train
+# from Config import Config
+# import joblib
+#
+# def test_model_train():
+#     # Run training
+#     model_train()
+#
+#     # Check if model was saved
+#     model_path = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR, "model.pkl")
+#     assert os.path.exists(model_path), "Model file was not saved."
+#
+#     # Check if it’s a valid model
+#     model = joblib.load(model_path)
+#     assert hasattr(model, "predict"), "Loaded model does not have 'predict' method."
+#
+# if __name__ == "__main__":
+#     test_model_train()
+
+# test for eval module
 import os
-from src.train import model_train
+import json
 from Config import Config
-import joblib
-# Training module test
-def test_model_train():
-    # Run training
-    model_train()
+from src.evaluate import evaluate_model
+def test_evaluate_model():
+    # Run evaluation
+    evaluate_model()
 
-    # Check if model was saved
-    model_path = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR, "model.pkl")
-    assert os.path.exists(model_path), "Model file was not saved."
+    # Check that evaluation_metrics.json is created
+    metrics_path = os.path.join(
+        Config.DATA_DIR, Config.ARTIFACT_DIR, "evaluation_metrics.json"
+    )
+    assert os.path.exists(metrics_path), "Evaluation metrics JSON file not created."
 
-    # Check if it’s a valid model
-    model = joblib.load(model_path)
-    assert hasattr(model, "predict"), "Loaded model does not have 'predict' method."
+    # Load and validate metrics
+    with open(metrics_path, "r") as f:
+        lines = f.readlines()
+        assert len(lines) > 0
+        metrics = json.loads(lines[0])
+        assert "accuracy" in metrics
+        assert 0.0 <= metrics["accuracy"] <= 1.0
 
 if __name__ == "__main__":
-    test_model_train()
+    test_evaluate_model()
