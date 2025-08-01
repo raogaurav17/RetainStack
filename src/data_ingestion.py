@@ -6,8 +6,6 @@ from sklearn.model_selection import train_test_split
 
 logger = get_logger("data_ingestion")
 
-ROOT_DIR = os.getcwd()
-print("ROOT_DIR:", ROOT_DIR)
 
 def ingest_data():
     # getting data files path
