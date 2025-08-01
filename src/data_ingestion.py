@@ -11,14 +11,9 @@ print("ROOT_DIR:", ROOT_DIR)
 
 def ingest_data():
     # getting data files path
-    print(os.path.abspath("data/raw_data.csv"))
-    print(os.path.exists("data/raw_data.csv"))
-
     raw_data_path = os.path.join(Config.DATA_DIR, Config.RAW_DATA_FILE)
     train_data_path = os.path.join(Config.DATA_DIR, Config.TRAIN_DATA_FILE)
     test_data_path = os.path.join(Config.DATA_DIR, Config.TEST_DATA_FILE)
-    print("RAW DATA PATH (constructed):", raw_data_path)
-    print("File exists?", os.path.exists(raw_data_path))
     try:
         #creating training and testing data
         raw_df = pd.read_csv(raw_data_path)
