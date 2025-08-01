@@ -1,8 +1,8 @@
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
-from logger.logger import get_logger
+from src.logger.logger import get_logger
 import pandas as pd
-from Config import Config
+from src.Config import Config
 import os
 import yaml
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder

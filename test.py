@@ -113,7 +113,7 @@
 # test for eval module
 import os
 import json
-from Config import Config
+from src.Config import Config
 from src.evaluate import evaluate_model
 def test_evaluate_model():
     # Run evaluation

@@ -1,0 +1,53 @@
+stages:
+  data_ingestion:
+    cmd: python -m src.data_ingestion
+    deps:
+      - data/raw_data.csv
+      - src/data_ingestion.py
+      - src/Config.py
+
+    outs:
+      - data/test_data.csv
+      - data/train_data.csv
+
+  data_preprocessing:
+    cmd: python -m src.data_preprocessing
+    deps:
+      - data/train_data.csv
+      - data/test_data.csv
+      - src/data_preprocessing.py
+    params:
+      - data_preprocess
+    outs:
+      - data/processed/x_train.csv
+      - data/processed/y_train.csv
+      - data/processed/x_val.csv
+      - data/processed/y_val.csv
+      - data/processed/x_test.csv
+      - data/processed/y_test.csv
+      - data/artifact/preprocessor.pkl
+
+  train:
+    cmd: python -m src.train
+    deps:
+      - data/processed/x_train.csv
+      - data/processed/y_train.csv
+      - data/processed/x_val.csv
+      - data/processed/y_val.csv
+      - src/train.py
+
+    params:
+      - train
+    outs:
+      - data/artifact/model.pkl
+
+  evaluate:
+    cmd: python -m src.evaluate
+    deps:
+      - data/processed/x_test.csv
+      - data/processed/y_test.csv
+      - data/artifact/model.pkl
+      - src/evaluate.py
+    metrics:
+      - data/artifact/evaluation_metrics.json:
+          cache: false

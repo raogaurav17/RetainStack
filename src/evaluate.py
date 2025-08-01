@@ -2,8 +2,8 @@ import os
 import pandas as pd
 import joblib
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
-from Config import Config
-from logger.logger import get_logger
+from src.Config import Config
+from src.logger.logger import get_logger
 
 logger = get_logger("evaluate")
 

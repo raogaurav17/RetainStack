@@ -1,0 +1,148 @@
+schema: '2.0'
+stages:
+  data_ingestion:
+    cmd: python -m src.data_ingestion
+    deps:
+    - path: data/raw_data.csv
+      hash: md5
+      md5: cc6ec1db03b4f10f8de52c56ff48b085
+      size: 1072063
+    - path: src/Config.py
+      hash: md5
+      md5: d73396bc267c6f5ad66b1fa154ce367d
+      size: 1074
+    - path: src/data_ingestion.py
+      hash: md5
+      md5: 07ee29aca5fef0e7b72b8dc2174df829
+      size: 1571
+    outs:
+    - path: data/test_data.csv
+      hash: md5
+      md5: adfbe0c48cfc671e0f5a3511659541e1
+      size: 234136
+    - path: data/train_data.csv
+      hash: md5
+      md5: 2a860158c0b95a9c03dc527d81241b94
+      size: 935382
+  data_preprocessing:
+    cmd: python -m src.data_preprocessing
+    deps:
+    - path: data/test_data.csv
+      hash: md5
+      md5: adfbe0c48cfc671e0f5a3511659541e1
+      size: 234136
+    - path: data/train_data.csv
+      hash: md5
+      md5: 2a860158c0b95a9c03dc527d81241b94
+      size: 935382
+    - path: src/data_preprocessing.py
+      hash: md5
+      md5: 4207fc1cd03d5fb5e8cd79c4971be65a
+      size: 4903
+    params:
+      params.yaml:
+        data_preprocess:
+          features:
+          - PageValues
+          - ExitRates
+          - ProductRelated
+          - Administrative
+          - BounceRates
+          - ProductRelated_Duration
+          - Administrative_Duration
+          - Month
+          - Informational_Duration
+          categorical_features:
+          - Month
+    outs:
+    - path: data/artifact/preprocessor.pkl
+      hash: md5
+      md5: ade640c464f100590fc55e3076e16382
+      size: 3491
+    - path: data/processed/x_test.csv
+      hash: md5
+      md5: c0bf81410bae23420d0780ee4b585a94
+      size: 347136
+    - path: data/processed/x_train.csv
+      hash: md5
+      md5: fdfab4feed2e6a7a813767e62b88b5bb
+      size: 1113031
+    - path: data/processed/x_val.csv
+      hash: md5
+      md5: 27c2b52af7e77a464921ce54d1df53e8
+      size: 278019
+    - path: data/processed/y_test.csv
+      hash: md5
+      md5: 1b83d43f7fdab3a6fb4e4db3bad5eaf8
+      size: 16860
+    - path: data/processed/y_train.csv
+      hash: md5
+      md5: 4c2ab3b7f7a076b8fbd7e6f7ed382501
+      size: 54053
+    - path: data/processed/y_val.csv
+      hash: md5
+      md5: fd6ac5b052c9d7eff6d9f1700fce5827
+      size: 13516
+  train:
+    cmd: python -m src.train
+    deps:
+    - path: data/processed/x_train.csv
+      hash: md5
+      md5: fdfab4feed2e6a7a813767e62b88b5bb
+      size: 1113031
+    - path: data/processed/x_val.csv
+      hash: md5
+      md5: 27c2b52af7e77a464921ce54d1df53e8
+      size: 278019
+    - path: data/processed/y_train.csv
+      hash: md5
+      md5: 4c2ab3b7f7a076b8fbd7e6f7ed382501
+      size: 54053
+    - path: data/processed/y_val.csv
+      hash: md5
+      md5: fd6ac5b052c9d7eff6d9f1700fce5827
+      size: 13516
+    - path: src/train.py
+      hash: md5
+      md5: b6fb5056a74328e4c8a3b4c56bab5e8c
+      size: 2521
+    params:
+      params.yaml:
+        train:
+          random_state: 42
+          n_estimators: 75
+          learning_rate: 0.05
+          objective: binary:logistic
+          eval_metric: auc
+          max_depth: 3
+          subsample: 0.3
+          scale_pos_weight: 2.9
+    outs:
+    - path: data/artifact/model.pkl
+      hash: md5
+      md5: 083a7752ad0f4875f78d9547c665f562
+      size: 90788
+  evaluate:
+    cmd: python -m src.evaluate
+    deps:
+    - path: data/artifact/model.pkl
+      hash: md5
+      md5: 083a7752ad0f4875f78d9547c665f562
+      size: 90788
+    - path: data/processed/x_test.csv
+      hash: md5
+      md5: c0bf81410bae23420d0780ee4b585a94
+      size: 347136
+    - path: data/processed/y_test.csv
+      hash: md5
+      md5: 1b83d43f7fdab3a6fb4e4db3bad5eaf8
+      size: 16860
+    - path: src/evaluate.py
+      hash: md5
+      md5: cc1421ed6cfdcb77817c930bb52c8877
+      size: 2148
+    outs:
+    - path: data/artifact/evaluation_metrics.json
+      hash: md5
+      md5: 0522ecd6543f2484176af3e2eda5e99b
+      size: 26
