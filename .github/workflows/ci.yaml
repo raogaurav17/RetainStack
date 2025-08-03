@@ -8,7 +8,6 @@ on:
     branches:
       - master
 
-
 jobs:
   mlops-pipeline:
     runs-on: ubuntu-latest
@@ -29,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install dvc[azure]
+          pip install dvc dvc[azure]
       
       - name: Set DVC Azure connection string
         run: |
