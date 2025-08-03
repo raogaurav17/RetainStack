@@ -1,0 +1,48 @@
+name: RetainStack CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+
+jobs:
+  mlops-pipeline:
+    runs-on: ubuntu-latest
+
+    env:
+      AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CONNECTION_STRING }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install dvc[azure]
+      
+      - name: Set DVC Azure connection string
+        run: |
+          dvc remote modify myremote connection_string "${AZURE_CONNECTION_STRING}"
+
+      - name: Pull raw data from DVC remote
+        run: dvc pull
+
+      - name: Run DVC pipeline
+        run: dvc repro
+
+      - name: Push results to DVC remote
+        run: dvc push
+
+
+
