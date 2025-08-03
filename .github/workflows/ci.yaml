@@ -37,6 +37,9 @@ jobs:
       - name: Pull raw data from DVC remote
         run: dvc pull
 
+      - name: Pull raw data from DVC remote
+        run: dvc pull
+
       - name: Run DVC pipeline
         run: dvc repro
 
