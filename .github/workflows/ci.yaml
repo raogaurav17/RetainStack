@@ -32,19 +32,16 @@ jobs:
       
       - name: Set DVC Azure connection string
         run: |
-          dvc remote modify myremote connection_string "${AZURE_CONNECTION_STRING}"
+          uv run dvc remote modify myremote connection_string "${AZURE_CONNECTION_STRING}"
 
       - name: Pull raw data from DVC remote
-        run: dvc pull
-
-      - name: Pull raw data from DVC remote
-        run: dvc pull
+        run: uv run dvc pull
 
       - name: Run DVC pipeline
-        run: dvc repro
+        run: uv run dvc repro
 
       - name: Push results to DVC remote
-        run: dvc push
+        run: uv run dvc push
 
 
 
