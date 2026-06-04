@@ -28,7 +28,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install uv
-          uv venv
           uv sync
       
       - name: Set DVC Azure connection string
