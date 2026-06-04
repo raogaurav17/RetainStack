@@ -27,8 +27,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-          pip install dvc dvc[azure]
+          pip install uv
+          uv add -r requirements.txt
+          uv add dvc dvc[azure]
       
       - name: Set DVC Azure connection string
         run: |

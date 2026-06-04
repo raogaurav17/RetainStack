@@ -1,137 +1,115 @@
-# 📊 RetainStack
+# RetainStack
 
-**retainStack** is an end-to-end MLOps pipeline for predicting and improving online customer retention. It leverages machine learning models, DVC for reproducibility, and CI/CD practices for automation and deployment.
+RetainStack is an end-to-end MLOps pipeline for predicting and improving online customer retention. It leverages machine learning models, Data Version Control (DVC) for reproducibility, and Continuous Integration/Continuous Deployment (CI/CD) practices for automation and deployment.
 
----
+**Note: This project is currently under development. Not all features are fully implemented.**
 
-## Under Development
- So all feautres are not implemented yet
+## Features
 
-## 🚀 Features
+- **Data Version Control (DVC)**: Track and version datasets and machine learning models.
+- **Data Preprocessing**: Clean, transform, and split raw data.
+- **Machine Learning Modeling**: Train and evaluate predictive models.
+- **Model Registry**: Store and version trained models.
+- **Testing Suite**: Unit tests for pipeline components.
+- **CI/CD Integration**: GitHub Actions for linting, testing, and model training.
+- **Cloud-ready**: Configurable for deployment on AWS, Azure, or GCP.
 
-- 🔄 **Data Version Control (DVC)**: Track and version datasets and ML models.
-- 🧹 **Data Preprocessing**: Clean, transform, and split raw data.
-- 🧠 **ML Modeling**: Train and evaluate predictive models.
-- 📦 **Model Registry**: Store and version trained models.
-- 🧪 **Testing Suite**: Unit tests for pipeline components.
-- ⚙️ **CI/CD Integration**: GitHub Actions for linting, testing, and model training.
-- ☁️ **Cloud-ready**: Configurable for deployment on AWS, Azure, or GCP.
+## Project Structure
 
----
-
-## 🗂️ Project Structure
-
-```
-
-retainStack/
-│
+```text
+RetainStack/
 ├── data/                      # Raw and processed datasets
-├── logger/
-|   ├── logger.py              # Logger module for log monitoring
+├── Experments/                # Experiment tracking / notebooks
 ├── src/                       # Source code
-│   ├── data\_ingestion.py     # Ingestion scripts
+│   ├── logger/
+│   │   └── logger.py          # Logger module
+│   ├── Config.py              # Configuration handling
+│   ├── data_ingestion.py      # Ingestion scripts
 │   ├── data_preprocessing.py  # Cleaning and splitting logic
-│   ├── training.py            # Model training logic
-│   ├── evaluation.py          # Model evaluation
-│   ├── utils/                 # Reusable helpers and logger
-│  
+│   ├── train.py               # Model training logic
+│   └── evaluate.py            # Model evaluation
+├── main.py                    # Main entry point
 ├── dvc.yaml                   # DVC pipeline definition
 ├── params.yaml                # Hyperparameters & config
-├── test.py                     # Unit tests
-├── .github/workflows/         # CI/CD workflows
-├── requirements.txt
-├── README.md
-└── .gitignore
+├── pyproject.toml             # Python project metadata
+├── setup.py                   # Setup script
+├── requirements.txt           # Production dependencies
+├── requirements-dev.txt       # Development dependencies
+└── README.md                  # Project documentation
+```
 
-````
+## Setup Instructions
 
----
-
-## 📦 Setup Instructions
-
-1. **Clone the repo**
+1. **Clone the repository**
    ```bash
    git clone https://github.com/raogauarav17/RetainStack.git
    cd RetainStack
-    ```
+   ```
 
-2. **Create virtual environment**
-
+2. **Create a virtual environment**
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate   # Linux/Mac
-   .venv\Scripts\activate      # Windows
+   uv venv
+   source .venv/bin/activate   # Linux/macOS
+   # or for Windows:
+   # .venv\Scripts\activate
    ```
 
 3. **Install dependencies**
-
    ```bash
-   pip install -r requirements.txt
+   uv add -r requirements.txt
    ```
 
-4. **Set up DVC**
-
+4. **Initialize and setup DVC**
    ```bash
    dvc init
    dvc pull
    ```
 
----
+## Running the Pipeline
 
-## ⚙️ Running the Pipeline
-
-To run the full DVC pipeline:
+To execute the entire DVC pipeline:
 
 ```bash
 dvc repro
 ```
 
-To run individual stages (e.g., data ingestion):
+To execute individual stages manually (e.g., data ingestion):
 
 ```bash
 python src/data_ingestion.py
 ```
 
----
+## Configuration
 
-## 📁 Configuration
+All configuration details (paths, split ratios, model parameters) are defined in the following files:
 
-All configuration (paths, split ratios, model parameters) is defined in:
+- `params.yaml`: Hyperparameters
+- `config.py`: Directory structure definitions
+- `dvc.yaml`: Pipeline stage configurations
 
-* `params.yaml` for hyperparameters
-* `config.py` for directory structure
-* `dvc.yaml` for pipeline stages
+## Testing
 
----
-
-
-## 🧪 Testing
-
-Run unit tests using:
+Run unit tests using `pytest`:
 
 ```bash
-pytest tests/
+pytest test.py
 ```
 
----
+## Results
 
-## 📊 Results
+Model performance metrics and evaluation visualizations are output to the `artifacts/` or `reports/` directory. DVC tracks metrics which can be displayed via:
 
-Model performance metrics and evaluation visualizations are saved in the `artifacts/` or `reports/` directory. DVC tracks metrics via `dvc metrics show`.
+```bash
+dvc metrics show
+```
 
----
+## Future Improvements
 
-## 📌 Future Improvements
+- Implementation of Streamlit or FastAPI for model serving
+- Integration with MLflow for comprehensive model tracking
+- Addition of drift monitoring and alerting mechanisms
+- Full cloud deployment integration (e.g., AWS SageMaker, GCP Vertex AI)
 
-* Streamlit or FastAPI serving
-* MLflow for model tracking
-* Drift monitoring and alerting
-* Full cloud deployment (SageMaker, Vertex AI)
+## Author
 
----
-
-## 👨‍💻 Author
-
-**Gaurav**
----
-
+Gaurav
