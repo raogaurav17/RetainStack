@@ -14,10 +14,10 @@ class Config:
 
     # Data Ingestion and Preprocessing Configs
     RAW_DATA_FILE: str = os.getenv("RAW_DATA_FILE", "raw_data.csv")
-    TRAIN_DATA_FILE: str = os.getenv("TRAIN_DATA_DIR", "train_data.csv")
-    TEST_DATA_FILE: str = os.getenv("TEST_DATA_DIR", "test_data.csv")
-    TRAIN_TEST_SPLIT_RATIO: float = os.getenv("TRAIN_TEST_SPLIT_RATIO", 0.2)
-    TRAIN_VAL_SPLIT_RATIO: float = os.getenv("TRAIN_TEST_SPLIT_RATIO", 0.2)
+    TRAIN_DATA_FILE: str = os.getenv("TRAIN_DATA_FILE", "train_data.csv")
+    TEST_DATA_FILE: str = os.getenv("TEST_DATA_FILE", "test_data.csv")
+    TRAIN_TEST_SPLIT_RATIO: float = float(os.getenv("TRAIN_TEST_SPLIT_RATIO", 0.2))
+    TRAIN_VAL_SPLIT_RATIO: float = float(os.getenv("TRAIN_VAL_SPLIT_RATIO", 0.2))
 
     ## processed data config
     PROCESSED_DATA_DIR: str = os.getenv("PROCESS_DATA_DIR", "processed")

@@ -28,7 +28,7 @@ def preprocess_data() -> None:
         logger.debug(f"Data Fetched Successfully from {test_data_path}")
 
         # Splitting temporary train data to train and validation data
-        train_data, val_data = train_test_split(temp_train_data, test_size=0.2, random_state=42)
+        train_data, val_data = train_test_split(temp_train_data, test_size=Config.TRAIN_VAL_SPLIT_RATIO, random_state=42)
         logger.debug(f"Train and test data split Successfully Successfully from {train_data_path}")
 
         # Splitting input and output column
