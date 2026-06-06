@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "dvc[azure]>=3.67.1",
+    "dvc[s3]>=3.67.1",
     "mlflow>=1.27.0",
     "pandas>=3.0.3",
     "scikit-learn>=1.9.0",

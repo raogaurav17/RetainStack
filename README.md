@@ -14,6 +14,41 @@ RetainStack is an end-to-end MLOps pipeline for predicting and improving online 
 - **CI/CD Integration**: GitHub Actions for linting, testing, and model training.
 - **Cloud-ready**: Configurable for deployment on AWS, Azure, or GCP.
 
+## Dataset
+
+RetainStack uses the **[Online Shoppers Purchasing Intention Dataset](https://archive.ics.uci.edu/ml/datasets/Online+Shoppers+Purchasing+Intention+Dataset)** from the UCI Machine Learning Repository.
+
+| Property | Details |
+|---|---|
+| **Source** | UCI Machine Learning Repository |
+| **Records** | ~12,330 web sessions |
+| **Task** | Binary Classification |
+| **Target Variable** | `Revenue` — whether the session ended in a purchase (`True`/`False`) |
+| **Domain** | E-commerce / Web Analytics |
+
+### Features
+
+| Feature | Type | Description |
+|---|---|---|
+| `Administrative` | Integer | Number of administrative pages visited |
+| `Administrative_Duration` | Float | Total time spent on administrative pages (seconds) |
+| `Informational` | Integer | Number of informational pages visited |
+| `Informational_Duration` | Float | Total time spent on informational pages (seconds) |
+| `ProductRelated` | Integer | Number of product-related pages visited |
+| `ProductRelated_Duration` | Float | Total time spent on product-related pages (seconds) |
+| `BounceRates` | Float | Average bounce rate of pages visited |
+| `ExitRates` | Float | Average exit rate of pages visited |
+| `PageValues` | Float | Average page value of pages visited before a transaction |
+| `SpecialDay` | Float | Closeness of the visit to a special day (e.g. Valentine's Day) |
+| `Month` | Categorical | Month of the visit |
+| `OperatingSystems` | Integer | Operating system used by the visitor |
+| `Browser` | Integer | Browser used by the visitor |
+| `Region` | Integer | Geographic region of the visitor |
+| `TrafficType` | Integer | Traffic source type |
+| `VisitorType` | Categorical | New visitor, returning visitor, or other |
+| `Weekend` | Boolean | Whether the visit occurred on a weekend |
+| `Revenue` | Boolean | **Target** — whether a purchase was completed |
+
 ## Project Structure
 
 ```text

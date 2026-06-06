@@ -13,26 +13,23 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CONNECTION_STRING }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
-
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
           pip install uv
-          uv sync
-      
-      - name: Set DVC Azure connection string
-        run: |
-          uv run dvc remote modify myremote connection_string "${AZURE_CONNECTION_STRING}"
+          uv sync --locked
 
       - name: Pull raw data from DVC remote
         run: uv run dvc pull
@@ -42,6 +39,3 @@ jobs:
 
       - name: Push results to DVC remote
         run: uv run dvc push
-
-
-

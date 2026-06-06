@@ -1,5 +1,6 @@
 [core]
-    remote = myremote
+    remote = storage
     autostage = true
-['remote "myremote"']
-    url = azure://customerdata
+    
+['remote "storage"']
+    url = s3://retainstack
