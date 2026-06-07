@@ -2,10 +2,11 @@
 
 RetainStack is an end-to-end MLOps pipeline for predicting online customer purchase intent. It uses an XGBoost binary classifier trained on e-commerce session data, with DVC for pipeline reproducibility and data versioning, and GitHub Actions for CI/CD automation.
 
-> **Note:** This project is under active development. Some planned features (serving layer, MLflow tracking, drift monitoring) are not yet fully implemented.
+> **Note:** This project is under active development. Some planned features (MLflow tracking, drift monitoring) are not yet fully implemented.
 
 ## Features
 
+- **FastAPI Serving Layer** — Real-time prediction API with health/readiness probes, Pydantic validation, and auto-generated OpenAPI docs
 - **DVC Pipeline** — Reproducible, parameterised stages for ingestion, preprocessing, training, and evaluation
 - **Data Versioning** — Raw data and model artifacts tracked and stored on AWS S3 via DVC
 - **XGBoost Classifier** — Tuned binary classifier with class-imbalance handling
@@ -62,6 +63,15 @@ RetainStack/
 │   ├── data_exploration.ipynb
 │   └── model_training.ipynb
 ├── src/
+│   ├── api/
+│   │   ├── app.py             # FastAPI application factory + lifespan
+│   │   ├── dependencies.py    # Model/preprocessor loading & DI
+│   │   ├── routes/
+│   │   │   ├── health.py      # GET /health, /ready
+│   │   │   └── predict.py     # POST /predict
+│   │   └── schemas/
+│   │       ├── request.py     # Pydantic input validation
+│   │       └── response.py    # Pydantic response models
 │   ├── logger/
 │   │   └── logger.py          # Rotating file + console logger
 │   ├── Config.py              # Centralised configuration (env-overridable)
@@ -129,13 +139,7 @@ Force a full re-run:
 uv run dvc repro --force
 ```
 
-### Option B — Python orchestrator (all stages in one process)
-
-```bash
-python main.py
-```
-
-### Option C — Run individual stages manually
+### Option B — Run individual stages manually
 
 ```bash
 python -m src.data_ingestion
@@ -143,6 +147,68 @@ python -m src.data_preprocessing
 python -m src.train
 python -m src.evaluate
 ```
+
+---
+
+## API Server
+
+RetainStack includes a FastAPI serving layer for real-time purchase-intent predictions.
+
+### Start the server
+
+```bash
+uv run python main.py
+```
+
+Or directly via uvicorn:
+
+```bash
+uv run uvicorn src.api.app:app --host 127.0.0.1 --port 8000
+```
+
+Interactive API docs are available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+
+### Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/v1/health` | Liveness probe — returns `{"status": "ok"}` |
+| `GET` | `/api/v1/ready` | Readiness probe — confirms model & preprocessor are loaded |
+| `POST` | `/api/v1/predict` | Predict purchase intent for a single session |
+
+### Example prediction request
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/v1/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "Administrative": 0,
+    "Administrative_Duration": 0.0,
+    "Informational_Duration": 0.0,
+    "ProductRelated": 53,
+    "ProductRelated_Duration": 1482.5,
+    "BounceRates": 0.02,
+    "ExitRates": 0.05,
+    "PageValues": 8.15,
+    "Month": "Nov"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "prediction": 1,
+  "purchase_probability": 0.5546,
+  "confidence": "medium"
+}
+```
+
+| Response Field | Description |
+|---|---|
+| `prediction` | `1` = purchase predicted, `0` = no purchase |
+| `purchase_probability` | Model's probability estimate (0–1) |
+| `confidence` | `high` (≥ 0.75), `medium` (≥ 0.40), or `low` (< 0.40) |
 
 ---
 
@@ -195,7 +261,8 @@ Metrics tracked:
 
 ## Future Improvements
 
-- **Model serving** — FastAPI REST endpoint or Streamlit dashboard for live inference
+- **Batch prediction endpoint** — `POST /api/v1/predict/batch` for bulk inference
+- **Model hot-reload** — Reload artifacts without restarting the server after a pipeline re-run
 - **MLflow integration** — Experiment tracking and model registry (dependency already included)
 - **Hyperparameter tuning** — Automated search with Optuna or scikit-learn `GridSearchCV`
 - **Data validation** — Schema checks on ingested data with `pandera` or `great_expectations`

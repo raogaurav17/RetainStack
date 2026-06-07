@@ -15,7 +15,7 @@ stages:
     deps:
       - data/train_data.csv
       - data/test_data.csv
-      - src/data_ingestion.py
+      - src/data_preprocessing.py
     params:
       - data_preprocess
     outs:
@@ -34,7 +34,7 @@ stages:
       - data/processed/y_train.csv
       - data/processed/x_val.csv
       - data/processed/y_val.csv
-      - src/data_preprocessing.py
+      - src/train.py
 
     params:
       - train
@@ -47,7 +47,7 @@ stages:
       - data/processed/x_test.csv
       - data/processed/y_test.csv
       - data/artifact/model.pkl
-      - src/train.py
+      - src/evaluate.py
     metrics:
       - data/artifact/evaluation_metrics.json:
           cache: false
