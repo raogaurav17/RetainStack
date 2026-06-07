@@ -1,18 +1,20 @@
 # RetainStack
 
-RetainStack is an end-to-end MLOps pipeline for predicting and improving online customer retention. It leverages machine learning models, Data Version Control (DVC) for reproducibility, and Continuous Integration/Continuous Deployment (CI/CD) practices for automation and deployment.
+RetainStack is an end-to-end MLOps pipeline for predicting online customer purchase intent. It uses an XGBoost binary classifier trained on e-commerce session data, with DVC for pipeline reproducibility and data versioning, and GitHub Actions for CI/CD automation.
 
-**Note: This project is currently under development. Not all features are fully implemented.**
+> **Note:** This project is under active development. Some planned features (serving layer, MLflow tracking, drift monitoring) are not yet fully implemented.
 
 ## Features
 
-- **Data Version Control (DVC)**: Track and version datasets and machine learning models.
-- **Data Preprocessing**: Clean, transform, and split raw data.
-- **Machine Learning Modeling**: Train and evaluate predictive models.
-- **Model Registry**: Store and version trained models.
-- **Testing Suite**: Unit tests for pipeline components.
-- **CI/CD Integration**: GitHub Actions for linting, testing, and model training.
-- **Cloud-ready**: Configurable for deployment on AWS, Azure, or GCP.
+- **DVC Pipeline** — Reproducible, parameterised stages for ingestion, preprocessing, training, and evaluation
+- **Data Versioning** — Raw data and model artifacts tracked and stored on AWS S3 via DVC
+- **XGBoost Classifier** — Tuned binary classifier with class-imbalance handling
+- **Full Evaluation Metrics** — Accuracy, Precision, Recall, F1, ROC-AUC, and confusion matrix persisted as DVC metrics
+- **Rotating File Logging** — Per-module logs written to `logs/` with configurable log level and rotation
+- **CI/CD** — GitHub Actions workflow that pulls data, reproduces the pipeline, and pushes artifacts
+- **Environment-configurable** — All paths, split ratios, and hyperparameters overridable via environment variables or `params.yaml`
+
+---
 
 ## Dataset
 
@@ -26,124 +28,182 @@ RetainStack uses the **[Online Shoppers Purchasing Intention Dataset](https://ar
 | **Target Variable** | `Revenue` — whether the session ended in a purchase (`True`/`False`) |
 | **Domain** | E-commerce / Web Analytics |
 
-### Features
+### Features Used
 
 | Feature | Type | Description |
 |---|---|---|
 | `Administrative` | Integer | Number of administrative pages visited |
 | `Administrative_Duration` | Float | Total time spent on administrative pages (seconds) |
-| `Informational` | Integer | Number of informational pages visited |
 | `Informational_Duration` | Float | Total time spent on informational pages (seconds) |
 | `ProductRelated` | Integer | Number of product-related pages visited |
 | `ProductRelated_Duration` | Float | Total time spent on product-related pages (seconds) |
 | `BounceRates` | Float | Average bounce rate of pages visited |
 | `ExitRates` | Float | Average exit rate of pages visited |
 | `PageValues` | Float | Average page value of pages visited before a transaction |
-| `SpecialDay` | Float | Closeness of the visit to a special day (e.g. Valentine's Day) |
 | `Month` | Categorical | Month of the visit |
-| `OperatingSystems` | Integer | Operating system used by the visitor |
-| `Browser` | Integer | Browser used by the visitor |
-| `Region` | Integer | Geographic region of the visitor |
-| `TrafficType` | Integer | Traffic source type |
-| `VisitorType` | Categorical | New visitor, returning visitor, or other |
-| `Weekend` | Boolean | Whether the visit occurred on a weekend |
 | `Revenue` | Boolean | **Target** — whether a purchase was completed |
+
+---
 
 ## Project Structure
 
 ```text
 RetainStack/
-├── data/                      # Raw and processed datasets
-├── Experments/                # Experiment tracking / notebooks
-├── src/                       # Source code
+├── data/
+│   ├── raw_data.csv           # Source dataset (DVC-tracked)
+│   ├── train_data.csv         # Train split (DVC-tracked)
+│   ├── test_data.csv          # Test split (DVC-tracked)
+│   ├── processed/             # Preprocessed feature/label CSVs
+│   └── artifact/
+│       ├── preprocessor.pkl   # Fitted ColumnTransformer
+│       ├── model.pkl          # Trained XGBoost model
+│       └── evaluation_metrics.json
+├── Experiments/               # Exploratory notebooks
+│   ├── data_exploration.ipynb
+│   └── model_training.ipynb
+├── src/
 │   ├── logger/
-│   │   └── logger.py          # Logger module
-│   ├── Config.py              # Configuration handling
-│   ├── data_ingestion.py      # Ingestion scripts
-│   ├── data_preprocessing.py  # Cleaning and splitting logic
-│   ├── train.py               # Model training logic
-│   └── evaluate.py            # Model evaluation
-├── main.py                    # Main entry point
-├── dvc.yaml                   # DVC pipeline definition
-├── params.yaml                # Hyperparameters & config
-├── pyproject.toml             # Python project metadata
-├── setup.py                   # Setup script
-├── requirements.txt           # Production dependencies
-├── requirements-dev.txt       # Development dependencies
-└── README.md                  # Project documentation
+│   │   └── logger.py          # Rotating file + console logger
+│   ├── Config.py              # Centralised configuration (env-overridable)
+│   ├── data_ingestion.py      # Loads raw data and produces train/test splits
+│   ├── data_preprocessing.py  # Feature engineering and scaling
+│   ├── train.py               # XGBoost model training
+│   └── evaluate.py            # Full model evaluation + metric persistence
+├── main.py                    # End-to-end pipeline orchestrator
+├── dvc.yaml                   # DVC pipeline stage definitions
+├── dvc.lock                   # DVC pipeline lock file
+├── params.yaml                # Hyperparameters and feature config
+├── pyproject.toml             # Project metadata and dependencies (uv)
+└── README.md
 ```
+
+---
 
 ## Setup Instructions
 
+### Prerequisites
+
+- Python ≥ 3.11
+- [uv](https://github.com/astral-sh/uv) package manager
+- AWS credentials with read/write access to the DVC S3 remote
+
+### Steps
+
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/raogauarav17/RetainStack.git
+   git clone https://github.com/raogaurav17/RetainStack.git
    cd RetainStack
    ```
 
-2. **Create a virtual environment**
+2. **Create a virtual environment and install dependencies**
    ```bash
-   uv venv
-   source .venv/bin/activate   # Linux/macOS
-   # or for Windows:
-   # .venv\Scripts\activate
+   uv sync
    ```
 
-3. **Install dependencies**
+3. **Activate the virtual environment**
    ```bash
-   uv add -r requirements.txt
+   source .venv/bin/activate      # Linux / macOS
+   # .venv\Scripts\activate       # Windows
    ```
 
-4. **Initialize and setup DVC**
+4. **Pull data and artifacts from the DVC remote**
    ```bash
-   dvc init
-   dvc pull
+   uv run dvc pull
    ```
+
+---
 
 ## Running the Pipeline
 
-To execute the entire DVC pipeline:
+### Option A — DVC (recommended, stage-level caching)
+
+Reproduce only the stages that have changed:
 
 ```bash
-dvc repro
+uv run dvc repro
 ```
 
-To execute individual stages manually (e.g., data ingestion):
+Force a full re-run:
 
 ```bash
-python src/data_ingestion.py
+uv run dvc repro --force
 ```
+
+### Option B — Python orchestrator (all stages in one process)
+
+```bash
+python main.py
+```
+
+### Option C — Run individual stages manually
+
+```bash
+python -m src.data_ingestion
+python -m src.data_preprocessing
+python -m src.train
+python -m src.evaluate
+```
+
+---
 
 ## Configuration
 
-All configuration details (paths, split ratios, model parameters) are defined in the following files:
+| File | Purpose |
+|---|---|
+| `params.yaml` | Feature list, categorical features, XGBoost hyperparameters |
+| `src/Config.py` | Directory paths and split ratios — all values are overridable via environment variables |
+| `dvc.yaml` | Pipeline stage definitions, dependencies, outputs, and metric declarations |
 
-- `params.yaml`: Hyperparameters
-- `config.py`: Directory structure definitions
-- `dvc.yaml`: Pipeline stage configurations
+### Key Environment Variables
 
-## Testing
+| Variable | Default | Description |
+|---|---|---|
+| `DATA_DIR` | `data` | Root directory for all data files |
+| `TRAIN_TEST_SPLIT_RATIO` | `0.2` | Fraction of raw data held out as test set |
+| `TRAIN_VAL_SPLIT_RATIO` | `0.2` | Fraction of training data held out as validation set |
+| `LOG_LEVEL` | `DEBUG` | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `LOG_DIR` | `logs` | Directory where log files are written |
 
-Run unit tests using `pytest`:
+---
+
+## Metrics & Results
+
+Evaluation metrics are written to `data/artifact/evaluation_metrics.json` after each pipeline run. View them with:
 
 ```bash
-pytest test.py
+uv run dvc metrics show
 ```
 
-## Results
-
-Model performance metrics and evaluation visualizations are output to the `artifacts/` or `reports/` directory. DVC tracks metrics which can be displayed via:
+Compare across experiments or git commits:
 
 ```bash
-dvc metrics show
+uv run dvc metrics diff
 ```
+
+Metrics tracked:
+
+| Metric | Description |
+|---|---|
+| `accuracy` | Overall classification accuracy |
+| `precision` | Precision on the positive class |
+| `recall` | Recall on the positive class |
+| `f1` | F1 score (harmonic mean of precision and recall) |
+| `roc_auc` | Area under the ROC curve |
+| `confusion_matrix` | 2×2 confusion matrix |
+
+---
 
 ## Future Improvements
 
-- Implementation of Streamlit or FastAPI for model serving
-- Integration with MLflow for comprehensive model tracking
-- Addition of drift monitoring and alerting mechanisms
-- Full cloud deployment integration (e.g., AWS SageMaker, GCP Vertex AI)
+- **Model serving** — FastAPI REST endpoint or Streamlit dashboard for live inference
+- **MLflow integration** — Experiment tracking and model registry (dependency already included)
+- **Hyperparameter tuning** — Automated search with Optuna or scikit-learn `GridSearchCV`
+- **Data validation** — Schema checks on ingested data with `pandera` or `great_expectations`
+- **Drift monitoring** — Alerting when feature or prediction distributions shift in production
+- **Extended feature set** — Evaluate dropped features (`VisitorType`, `Weekend`, `SpecialDay`, etc.)
+- **Cloud deployment** — AWS SageMaker or GCP Vertex AI integration
+
+---
 
 ## Author
 

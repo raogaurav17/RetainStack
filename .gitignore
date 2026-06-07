@@ -49,6 +49,7 @@ ehthumbs.db
 Desktop.ini
 
 # Logs
+logs/
 *.log
 
 # Temporary files
