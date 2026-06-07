@@ -2,8 +2,6 @@
 
 RetainStack is an end-to-end MLOps pipeline for predicting online customer purchase intent. It uses an XGBoost binary classifier trained on e-commerce session data, with DVC for pipeline reproducibility and data versioning, and GitHub Actions for CI/CD automation.
 
-> **Note:** This project is under active development. Some planned features (MLflow tracking, drift monitoring) are not yet fully implemented.
-
 ## Features
 
 - **FastAPI Serving Layer** — Real-time prediction API with health/readiness probes, Pydantic validation, and auto-generated OpenAPI docs
