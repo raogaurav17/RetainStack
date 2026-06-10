@@ -1,11 +1,12 @@
 # RetainStack
 
-RetainStack is an end-to-end MLOps pipeline for predicting online customer purchase intent. It uses an XGBoost binary classifier trained on e-commerce session data, with DVC for pipeline reproducibility and data versioning, and GitHub Actions for CI/CD automation.
+RetainStack is an end-to-end MLOps pipeline for predicting online customer purchase intent. It uses an XGBoost binary classifier trained on e-commerce session data, with DVC for pipeline reproducibility and data versioning, MLflow for experiment tracking, and GitHub Actions for CI/CD automation.
 
 ## Features
 
 - **FastAPI Serving Layer** — Real-time prediction API with health/readiness probes, Pydantic validation, and auto-generated OpenAPI docs
 - **DVC Pipeline** — Reproducible, parameterised stages for ingestion, preprocessing, training, and evaluation
+- **MLflow Tracking** — Integrated experiment tracking for logging hyperparameters, model metrics, and artifacts to SQLite
 - **Data Versioning** — Raw data and model artifacts tracked and stored on AWS S3 via DVC
 - **XGBoost Classifier** — Tuned binary classifier with class-imbalance handling
 - **Full Evaluation Metrics** — Accuracy, Precision, Recall, F1, ROC-AUC, and confusion matrix persisted as DVC metrics
@@ -255,13 +256,22 @@ Metrics tracked:
 | `roc_auc` | Area under the ROC curve |
 | `confusion_matrix` | 2×2 confusion matrix |
 
+### MLflow UI
+
+In addition to DVC metrics, you can visualize all experiments, parameters, and models using the MLflow UI. To launch the UI, run:
+
+```bash
+uv run mlflow ui --backend-store-uri sqlite:///mlflow.db
+```
+
+Navigate to `http://127.0.0.1:5000` in your browser to view the `RetainStack_Experiment` and compare different runs.
+
 ---
 
 ## Future Improvements
 
 - **Batch prediction endpoint** — `POST /api/v1/predict/batch` for bulk inference
 - **Model hot-reload** — Reload artifacts without restarting the server after a pipeline re-run
-- **MLflow integration** — Experiment tracking and model registry (dependency already included)
 - **Hyperparameter tuning** — Automated search with Optuna or scikit-learn `GridSearchCV`
 - **Data validation** — Schema checks on ingested data with `pandera` or `great_expectations`
 - **Drift monitoring** — Alerting when feature or prediction distributions shift in production
