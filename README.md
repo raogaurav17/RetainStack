@@ -7,6 +7,7 @@ RetainStack is an end-to-end MLOps pipeline for predicting online customer purch
 - **FastAPI Serving Layer** — Real-time prediction API with health/readiness probes, Pydantic validation, and auto-generated OpenAPI docs
 - **DVC Pipeline** — Reproducible, parameterised stages for ingestion, preprocessing, training, and evaluation
 - **MLflow Tracking** — Integrated experiment tracking for logging hyperparameters, model metrics, and artifacts to SQLite
+- **Secure Serialization** — Replaced `pickle`/`joblib` with `skops` for secure model persistence to prevent arbitrary code execution
 - **Data Versioning** — Raw data and model artifacts tracked and stored on AWS S3 via DVC
 - **XGBoost Classifier** — Tuned binary classifier with class-imbalance handling
 - **Full Evaluation Metrics** — Accuracy, Precision, Recall, F1, ROC-AUC, and confusion matrix persisted as DVC metrics
