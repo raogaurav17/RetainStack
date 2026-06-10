@@ -44,9 +44,8 @@ class ModelStore:
         logger.info("Preprocessor loaded from %s", preprocessor_path)
 
 
-# Module-level singleton — populated by the lifespan handler in app.py.
+# Module-level singleton - populated by the lifespan handler in app.py
 _store = ModelStore()
-
 
 def get_model_store() -> ModelStore:
     """FastAPI dependency that returns the shared ModelStore."""

@@ -13,7 +13,7 @@ router = APIRouter(prefix="/predict", tags=["Prediction"])
 
 
 def _load_feature_order() -> list[str]:
-    """Load feature order from params.yaml — single source of truth."""
+    """Load feature order from params.yaml"""
     with open("params.yaml", "r") as f:
         params = yaml.safe_load(f)
     return params["data_preprocess"]["features"]
@@ -53,8 +53,6 @@ async def predict(
             detail="Model or preprocessor not loaded. Check /ready.",
         )
 
-    # Build a single-row DataFrame in the exact column order the
-    # ColumnTransformer was fitted on.
     raw_dict = session.model_dump()
     row = {col: [raw_dict[col]] for col in _RAW_FEATURE_ORDER}
     df = pd.DataFrame(row)

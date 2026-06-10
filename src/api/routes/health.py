@@ -1,5 +1,3 @@
-"""Health and readiness probes for RetainStack API."""
-
 from fastapi import APIRouter, Depends
 
 from src.api.dependencies import ModelStore, get_model_store

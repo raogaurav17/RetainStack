@@ -3,6 +3,7 @@ import xgboost as xgb
 import os
 import joblib
 import yaml
+import mlflow
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 
 from src.Config import Config
@@ -61,6 +62,23 @@ def model_train():
         model_path = os.path.join(artifact_dir, "model.pkl")
         joblib.dump(model, model_path)
         logger.info(f"Model saved successfully at {model_path}")
+
+        # MLflow Tracking
+        mlflow.set_tracking_uri(Config.MLFLOW_TRACKING_URI)
+        mlflow.set_experiment(Config.MLFLOW_EXPERIMENT_NAME)
+        
+        with mlflow.start_run() as run:
+            mlflow.log_params(params['train'])
+            mlflow.sklearn.log_model(
+                model,
+                artifact_path="model"
+            )
+            
+            # Save run_id for evaluate.py
+            run_id_path = os.path.join(artifact_dir, "run_id.txt")
+            with open(run_id_path, "w") as f:
+                f.write(run.info.run_id)
+            logger.info(f"MLflow run ID ({run.info.run_id}) saved to {run_id_path}")
 
     except Exception as e:
         logger.error(e)

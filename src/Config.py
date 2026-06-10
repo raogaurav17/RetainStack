@@ -26,6 +26,10 @@ class Config:
     # Artifacts config
     ARTIFACT_DIR: str = os.getenv("MODEL_DIR", "artifact")
 
+    # MLflow Configs
+    MLFLOW_TRACKING_URI: str = os.getenv("MLFLOW_TRACKING_URI", "sqlite:///mlflow.db")
+    MLFLOW_EXPERIMENT_NAME: str = os.getenv("MLFLOW_EXPERIMENT_NAME", "RetainStack_Experiment")
+
 
 
 

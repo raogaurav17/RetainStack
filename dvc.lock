@@ -9,8 +9,8 @@ stages:
       size: 1072063
     - path: src/Config.py
       hash: md5
-      md5: fc4c0100748834f41f1a9670ff9a52fb
-      size: 1053
+      md5: 54b002d17d6ce78bfa89e4c6db63fe17
+      size: 1258
     - path: src/data_ingestion.py
       hash: md5
       md5: 7048178e2ff17ee5fa8cf5fbfd53ccf1
@@ -104,8 +104,8 @@ stages:
       size: 11542
     - path: src/train.py
       hash: md5
-      md5: 85a2077209c7b44c46a1cde803ddc700
-      size: 2446
+      md5: fe9b77e3e874149e7c8d29283f693be1
+      size: 3111
     params:
       params.yaml:
         train:
@@ -122,6 +122,10 @@ stages:
       hash: md5
       md5: 789d35f3587ea50c69b8badd85b63768
       size: 91144
+    - path: data/artifact/run_id.txt
+      hash: md5
+      md5: 1d5ca5c650212450e858bf33f12f005d
+      size: 32
   evaluate:
     cmd: python -m src.evaluate
     deps:
@@ -129,6 +133,10 @@ stages:
       hash: md5
       md5: 789d35f3587ea50c69b8badd85b63768
       size: 91144
+    - path: data/artifact/run_id.txt
+      hash: md5
+      md5: 1d5ca5c650212450e858bf33f12f005d
+      size: 32
     - path: data/processed/x_test.csv
       hash: md5
       md5: 547ec4bbb548ec9c4f47bb3ca22178cc
@@ -139,8 +147,8 @@ stages:
       size: 14393
     - path: src/evaluate.py
       hash: md5
-      md5: 556303ac7645308d029e05b6cadac82a
-      size: 3085
+      md5: 48342b6335d0faa643d4bf045384db64
+      size: 3980
     outs:
     - path: data/artifact/evaluation_metrics.json
       hash: md5

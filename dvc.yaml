@@ -40,6 +40,7 @@ stages:
       - train
     outs:
       - data/artifact/model.pkl
+      - data/artifact/run_id.txt
 
   evaluate:
     cmd: python -m src.evaluate
@@ -47,6 +48,7 @@ stages:
       - data/processed/x_test.csv
       - data/processed/y_test.csv
       - data/artifact/model.pkl
+      - data/artifact/run_id.txt
       - src/evaluate.py
     metrics:
       - data/artifact/evaluation_metrics.json:

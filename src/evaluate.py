@@ -2,6 +2,7 @@ import json
 import os
 import pandas as pd
 import joblib
+import mlflow
 from sklearn.metrics import (
     classification_report,
     accuracy_score,
@@ -81,6 +82,27 @@ def evaluate_model():
         with open(metrics_path, "w") as f:
             json.dump(metrics, f, indent=2)
         logger.info(f"Evaluation metrics saved to {metrics_path}")
+
+        # MLflow Tracking
+        run_id_path = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR, "run_id.txt")
+        if os.path.exists(run_id_path):
+            with open(run_id_path, "r") as f:
+                run_id = f.read().strip()
+            
+            mlflow.set_tracking_uri(Config.MLFLOW_TRACKING_URI)
+            mlflow.set_experiment(Config.MLFLOW_EXPERIMENT_NAME)
+            
+            with mlflow.start_run(run_id=run_id):
+                mlflow.log_metrics({
+                    "accuracy": accuracy,
+                    "precision": precision,
+                    "recall": recall,
+                    "f1": f1,
+                    "roc_auc": roc_auc
+                })
+            logger.info(f"Evaluation metrics logged to MLflow run {run_id}")
+        else:
+            logger.warning(f"run_id.txt not found at {run_id_path}, skipping MLflow logging")
 
     except Exception as e:
         logger.error(e)
