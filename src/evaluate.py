@@ -1,7 +1,7 @@
 import json
 import os
 import pandas as pd
-import joblib
+import skops.io as skio
 import mlflow
 from sklearn.metrics import (
     classification_report,
@@ -39,12 +39,13 @@ def evaluate_model():
         logger.debug(f"y_test shape: {y_test.shape}")
 
         # Load model
-        model_path = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR, "model.pkl")
+        model_path = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR, "model.skops")
         if not os.path.exists(model_path):
             logger.error(f"Model file not found at {model_path}")
             return
 
-        model = joblib.load(model_path)
+        trusted = skio.get_untrusted_types(file=model_path)
+        model = skio.load(model_path, trusted=trusted)
         logger.debug("Model loaded successfully.")
 
         # Predict

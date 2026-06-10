@@ -37,8 +37,8 @@ stages:
       size: 925517
     - path: src/data_preprocessing.py
       hash: md5
-      md5: 1af23d5afa5eb06d2ab521145aeda4fd
-      size: 4820
+      md5: 8a6725aa6b502b4a015d0b058cd99ba5
+      size: 4830
     params:
       params.yaml:
         data_preprocess:
@@ -55,10 +55,10 @@ stages:
           categorical_features:
           - Month
     outs:
-    - path: data/artifact/preprocessor.pkl
+    - path: data/artifact/preprocessor.skops
       hash: md5
-      md5: b227f13b88e164d3820a9003f4095eae
-      size: 3459
+      md5: 326eefbdb81f43c9323f9b1eb9eb28fb
+      size: 75373
     - path: data/processed/x_test.csv
       hash: md5
       md5: 547ec4bbb548ec9c4f47bb3ca22178cc
@@ -104,8 +104,8 @@ stages:
       size: 11542
     - path: src/train.py
       hash: md5
-      md5: fe9b77e3e874149e7c8d29283f693be1
-      size: 3111
+      md5: d77ca3b3066021b213e1ac08cc9838a3
+      size: 3121
     params:
       params.yaml:
         train:
@@ -118,24 +118,24 @@ stages:
           subsample: 0.3
           scale_pos_weight: 2.9
     outs:
-    - path: data/artifact/model.pkl
+    - path: data/artifact/model.skops
       hash: md5
-      md5: 789d35f3587ea50c69b8badd85b63768
-      size: 91144
+      md5: 5d735a3c50c646ae93ef86f3454151b1
+      size: 107549
     - path: data/artifact/run_id.txt
       hash: md5
-      md5: 1d5ca5c650212450e858bf33f12f005d
+      md5: 8ae1bcdeace4e2d37b690f26bd7af560
       size: 32
   evaluate:
     cmd: python -m src.evaluate
     deps:
-    - path: data/artifact/model.pkl
+    - path: data/artifact/model.skops
       hash: md5
-      md5: 789d35f3587ea50c69b8badd85b63768
-      size: 91144
+      md5: 5d735a3c50c646ae93ef86f3454151b1
+      size: 107549
     - path: data/artifact/run_id.txt
       hash: md5
-      md5: 1d5ca5c650212450e858bf33f12f005d
+      md5: 8ae1bcdeace4e2d37b690f26bd7af560
       size: 32
     - path: data/processed/x_test.csv
       hash: md5
@@ -147,8 +147,8 @@ stages:
       size: 14393
     - path: src/evaluate.py
       hash: md5
-      md5: 48342b6335d0faa643d4bf045384db64
-      size: 3980
+      md5: 46261632887def5f4ee05ee47dd16601
+      size: 4067
     outs:
     - path: data/artifact/evaluation_metrics.json
       hash: md5

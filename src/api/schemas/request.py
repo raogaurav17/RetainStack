@@ -17,7 +17,7 @@ class SessionFeatures(BaseModel):
     """Raw e-commerce session features — one visitor session.
 
     These are the *pre-preprocessor* features listed in params.yaml.
-    The API applies the fitted ColumnTransformer (preprocessor.pkl) before
+    The API applies the fitted ColumnTransformer (preprocessor.skops) before
     feeding them to the model, so callers send human-readable values.
     """
 

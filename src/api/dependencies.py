@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass, field
 
-import joblib
+import skops.io as skio
 
 from src.Config import Config
 from src.logger.logger import get_logger
@@ -21,26 +21,28 @@ class ModelStore:
         return self.model is not None and self.preprocessor is not None
 
     def load(self) -> None:
-        """Load model.pkl and preprocessor.pkl from the artifact directory."""
+        """Load model.skops and preprocessor.skops from the artifact directory."""
         artifact_dir = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR)
 
-        model_path = os.path.join(artifact_dir, "model.pkl")
-        preprocessor_path = os.path.join(artifact_dir, "preprocessor.pkl")
+        model_path = os.path.join(artifact_dir, "model.skops")
+        preprocessor_path = os.path.join(artifact_dir, "preprocessor.skops")
 
         if not os.path.exists(model_path):
-            logger.error("model.pkl not found at %s", model_path)
-            raise FileNotFoundError(f"model.pkl not found at {model_path}")
+            logger.error("model.skops not found at %s", model_path)
+            raise FileNotFoundError(f"model.skops not found at {model_path}")
 
         if not os.path.exists(preprocessor_path):
-            logger.error("preprocessor.pkl not found at %s", preprocessor_path)
+            logger.error("preprocessor.skops not found at %s", preprocessor_path)
             raise FileNotFoundError(
-                f"preprocessor.pkl not found at {preprocessor_path}"
+                f"preprocessor.skops not found at {preprocessor_path}"
             )
 
-        self.model = joblib.load(model_path)
+        trusted_model = skio.get_untrusted_types(file=model_path)
+        self.model = skio.load(model_path, trusted=trusted_model)
         logger.info("Model loaded from %s", model_path)
 
-        self.preprocessor = joblib.load(preprocessor_path)
+        trusted_preprocessor = skio.get_untrusted_types(file=preprocessor_path)
+        self.preprocessor = skio.load(preprocessor_path, trusted=trusted_preprocessor)
         logger.info("Preprocessor loaded from %s", preprocessor_path)
 
 

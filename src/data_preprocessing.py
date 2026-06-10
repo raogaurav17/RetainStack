@@ -6,7 +6,7 @@ from src.Config import Config
 import os
 import yaml
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
-import joblib
+import skops.io as skio
 
 logger = get_logger("data_preprocessing")
 
@@ -89,8 +89,8 @@ def preprocess_data() -> None:
         # Storing ColumnTransformer Artifact
         artifact_dir = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR)
         os.makedirs(artifact_dir, exist_ok=True)
-        preprocessor_path = os.path.join(artifact_dir, "preprocessor.pkl")
-        joblib.dump(preprocessor, preprocessor_path)
+        preprocessor_path = os.path.join(artifact_dir, "preprocessor.skops")
+        skio.dump(preprocessor, preprocessor_path)
         logger.info(f"Preprocessor saved successfully at {preprocessor_path}")
 
 

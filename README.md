@@ -55,8 +55,8 @@ RetainStack/
 │   ├── test_data.csv          # Test split (DVC-tracked)
 │   ├── processed/             # Preprocessed feature/label CSVs
 │   └── artifact/
-│       ├── preprocessor.pkl   # Fitted ColumnTransformer
-│       ├── model.pkl          # Trained XGBoost model
+│       ├── preprocessor.skops # Fitted ColumnTransformer
+│       ├── model.skops        # Trained XGBoost model
 │       └── evaluation_metrics.json
 ├── Experiments/               # Exploratory notebooks
 │   ├── data_exploration.ipynb

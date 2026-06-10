@@ -28,9 +28,9 @@ class ReadyResponse(BaseModel):
     """Response from /ready."""
 
     ready: bool = Field(..., description="Whether the model is loaded and ready to serve")
-    model_loaded: bool = Field(..., description="Whether model.pkl is loaded in memory")
+    model_loaded: bool = Field(..., description="Whether model.skops is loaded in memory")
     preprocessor_loaded: bool = Field(
-        ..., description="Whether preprocessor.pkl is loaded in memory"
+        ..., description="Whether preprocessor.skops is loaded in memory"
     )
 
 

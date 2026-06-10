@@ -25,7 +25,7 @@ stages:
       - data/processed/y_val.csv
       - data/processed/x_test.csv
       - data/processed/y_test.csv
-      - data/artifact/preprocessor.pkl
+      - data/artifact/preprocessor.skops
 
   train:
     cmd: python -m src.train
@@ -39,7 +39,7 @@ stages:
     params:
       - train
     outs:
-      - data/artifact/model.pkl
+      - data/artifact/model.skops
       - data/artifact/run_id.txt
 
   evaluate:
@@ -47,7 +47,7 @@ stages:
     deps:
       - data/processed/x_test.csv
       - data/processed/y_test.csv
-      - data/artifact/model.pkl
+      - data/artifact/model.skops
       - data/artifact/run_id.txt
       - src/evaluate.py
     metrics:

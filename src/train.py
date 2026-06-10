@@ -1,7 +1,7 @@
 import pandas as pd
 import xgboost as xgb
 import os
-import joblib
+import skops.io as skio
 import yaml
 import mlflow
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
@@ -59,8 +59,8 @@ def model_train():
         # saving model
         artifact_dir = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR)
         os.makedirs(artifact_dir, exist_ok=True)
-        model_path = os.path.join(artifact_dir, "model.pkl")
-        joblib.dump(model, model_path)
+        model_path = os.path.join(artifact_dir, "model.skops")
+        skio.dump(model, model_path)
         logger.info(f"Model saved successfully at {model_path}")
 
         # MLflow Tracking
