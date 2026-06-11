@@ -4,7 +4,8 @@ stages:
     deps:
       - data/raw_data.csv
       - src/data_ingestion.py
-      - src/Config.py
+      - src/config.py
+      - src/utils.py
 
     outs:
       - data/test_data.csv
@@ -16,6 +17,8 @@ stages:
       - data/train_data.csv
       - data/test_data.csv
       - src/data_preprocessing.py
+      - src/config.py
+      - src/utils.py
     params:
       - data_preprocess
     outs:
@@ -35,6 +38,8 @@ stages:
       - data/processed/x_val.csv
       - data/processed/y_val.csv
       - src/train.py
+      - src/config.py
+      - src/utils.py
 
     params:
       - train
@@ -50,6 +55,8 @@ stages:
       - data/artifact/model.skops
       - data/artifact/run_id.txt
       - src/evaluate.py
+      - src/config.py
+      - src/utils.py
     metrics:
       - data/artifact/evaluation_metrics.json:
           cache: false

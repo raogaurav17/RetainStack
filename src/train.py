@@ -2,11 +2,11 @@ import pandas as pd
 import xgboost as xgb
 import os
 import skops.io as skio
-import yaml
 import mlflow
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 
-from src.Config import Config
+from src.config import settings
+from src.utils import PipelineError, load_params
 from src.logger.logger import get_logger
 
 logger = get_logger("train")
@@ -20,7 +20,7 @@ def model_train():
         logger.info("Model training started...")
 
         #processed data paths
-        processed_dir = os.path.join(Config.DATA_DIR, Config.PROCESSED_DATA_DIR)
+        processed_dir = os.path.join(settings.DATA_DIR, settings.PROCESSED_DATA_DIR)
         os.makedirs(processed_dir, exist_ok=True)  # Required before saving CSVs
         x_train = pd.read_csv(os.path.join(processed_dir, "x_train.csv"))
         x_val = pd.read_csv(os.path.join(processed_dir, "x_val.csv"))
@@ -29,8 +29,7 @@ def model_train():
         logger.debug("Training and validation data loaded...")
 
         # getting params
-        with open("params.yaml", 'r') as stream:
-            params = yaml.safe_load(stream)
+        params = load_params(settings.PARAMS_FILE_PATH)
 
 
         # defining model
@@ -57,15 +56,15 @@ def model_train():
         logger.info(f"\nConfusion matrix: {confusion_matrix(y_val, y_pred)}")
 
         # saving model
-        artifact_dir = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR)
+        artifact_dir = settings.artifact_path
         os.makedirs(artifact_dir, exist_ok=True)
         model_path = os.path.join(artifact_dir, "model.skops")
         skio.dump(model, model_path)
         logger.info(f"Model saved successfully at {model_path}")
 
         # MLflow Tracking
-        mlflow.set_tracking_uri(Config.MLFLOW_TRACKING_URI)
-        mlflow.set_experiment(Config.MLFLOW_EXPERIMENT_NAME)
+        mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
+        mlflow.set_experiment(settings.MLFLOW_EXPERIMENT_NAME)
         
         with mlflow.start_run() as run:
             mlflow.log_params(params['train'])
@@ -82,6 +81,7 @@ def model_train():
 
     except Exception as e:
         logger.error(e)
+        raise PipelineError(f"Unexpected error in training: {e}") from e
 
 if __name__ == "__main__":
     model_train()

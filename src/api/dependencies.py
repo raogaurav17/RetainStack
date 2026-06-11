@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 
 import skops.io as skio
 
-from src.Config import Config
+from src.config import settings
 from src.logger.logger import get_logger
 
 logger = get_logger("api.dependencies")
@@ -22,7 +22,7 @@ class ModelStore:
 
     def load(self) -> None:
         """Load model.skops and preprocessor.skops from the artifact directory."""
-        artifact_dir = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR)
+        artifact_dir = settings.artifact_path
 
         model_path = os.path.join(artifact_dir, "model.skops")
         preprocessor_path = os.path.join(artifact_dir, "preprocessor.skops")

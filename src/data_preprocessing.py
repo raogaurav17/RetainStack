@@ -2,9 +2,9 @@ from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 from src.logger.logger import get_logger
 import pandas as pd
-from src.Config import Config
+from src.config import settings
+from src.utils import PipelineError, load_params
 import os
-import yaml
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 import skops.io as skio
 
@@ -17,8 +17,8 @@ def preprocess_data() -> None:
     """
     try:
         # defining raw data file path
-        train_data_path = os.path.join(Config.DATA_DIR, Config.TRAIN_DATA_FILE)
-        test_data_path = os.path.join(Config.DATA_DIR, Config.TEST_DATA_FILE)
+        train_data_path = os.path.join(settings.DATA_DIR, settings.TRAIN_DATA_FILE)
+        test_data_path = os.path.join(settings.DATA_DIR, settings.TEST_DATA_FILE)
         logger.info(f"Preprocessing raw data from {train_data_path} and {test_data_path}...")
 
         # Converting data to DataFrame
@@ -28,21 +28,22 @@ def preprocess_data() -> None:
         logger.debug(f"Data Fetched Successfully from {test_data_path}")
 
         # Splitting temporary train data to train and validation data
-        train_data, val_data = train_test_split(temp_train_data, test_size=Config.TRAIN_VAL_SPLIT_RATIO, random_state=42)
+        train_data, val_data = train_test_split(temp_train_data, test_size=settings.TRAIN_VAL_SPLIT_RATIO, random_state=42)
         logger.debug(f"Train and test data split Successfully Successfully from {train_data_path}")
 
+        # getting column names from params.yaml
+        params = load_params(settings.PARAMS_FILE_PATH)
+        target_col = params['data_preprocess']['target']
+        
         # Splitting input and output column
-        x_train = train_data.drop(columns=["Revenue"])
-        x_val = val_data.drop(columns=["Revenue"])
-        x_test = test_data.drop(columns=["Revenue"])
-        y_train = train_data["Revenue"]
-        y_val = val_data["Revenue"]
-        y_test = test_data["Revenue"]
+        x_train = train_data.drop(columns=[target_col])
+        x_val = val_data.drop(columns=[target_col])
+        x_test = test_data.drop(columns=[target_col])
+        y_train = train_data[target_col]
+        y_val = val_data[target_col]
+        y_test = test_data[target_col]
         logger.info(f"Train and test data split successfully into input and output data")
 
-        # getting column names from params.yaml
-        with open("params.yaml", 'r') as stream:
-            params = yaml.safe_load(stream)
         cols = params['data_preprocess']['features']
         categorical_features = params['data_preprocess']['categorical_features']
         numerical_features = [i for i in cols if i not in categorical_features]
@@ -52,7 +53,7 @@ def preprocess_data() -> None:
         missing_cols = [col for col in cols if col not in x_train.columns]
         if missing_cols:
             logger.error(f"Missing columns in training data: {missing_cols}")
-            return
+            raise PipelineError(f"Missing columns in training data: {missing_cols}")
 
 
         #defining a ColumnTransformer object for pipeline
@@ -77,7 +78,7 @@ def preprocess_data() -> None:
         x_test = pd.DataFrame(x_test, columns=all_ft)
 
         # defining preprocessed dir
-        processed_dir = os.path.join(Config.DATA_DIR, Config.PROCESSED_DATA_DIR)
+        processed_dir = os.path.join(settings.DATA_DIR, settings.PROCESSED_DATA_DIR)
         os.makedirs(processed_dir, exist_ok=True)  # Required before saving CSVs
         x_train.to_csv(os.path.join(processed_dir, "x_train.csv"), index=False)
         x_val.to_csv(os.path.join(processed_dir, "x_val.csv"), index=False)
@@ -87,7 +88,7 @@ def preprocess_data() -> None:
         y_test.to_csv(os.path.join(processed_dir, "y_test.csv"), index=False)
 
         # Storing ColumnTransformer Artifact
-        artifact_dir = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR)
+        artifact_dir = settings.artifact_path
         os.makedirs(artifact_dir, exist_ok=True)
         preprocessor_path = os.path.join(artifact_dir, "preprocessor.skops")
         skio.dump(preprocessor, preprocessor_path)
@@ -97,11 +98,12 @@ def preprocess_data() -> None:
         logger.info(f"Data Preprocessing Successfully into {processed_dir}")
         return
 
-    except FileNotFoundError:
+    except FileNotFoundError as e:
         logger.error("Data file not found, Exiting....")
-        return
+        raise PipelineError("Data file not found") from e
     except Exception as e:
         logger.error(f"Unexpected error: {e}, Exiting....")
+        raise PipelineError(f"Unexpected error in preprocessing: {e}") from e
 
 if __name__ == "__main__":
     preprocess_data()

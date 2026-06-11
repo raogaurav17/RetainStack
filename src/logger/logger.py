@@ -1,6 +1,6 @@
 import logging
 from logging.handlers import RotatingFileHandler
-from src.Config import Config
+from src.config import settings
 import os
 
 def get_logger(name: str) -> logging.Logger:
@@ -11,21 +11,20 @@ def get_logger(name: str) -> logging.Logger:
     """
 
     # Directory for storing log files
-    os.makedirs(Config.LOG_DIR, exist_ok=True)
+    os.makedirs(settings.LOG_DIR, exist_ok=True)
 
     # Initializing logger
     logger = logging.getLogger(name)
 
     #Sets the minimum logging level for the logger
-    logger.setLevel(getattr(logging, Config.LOG_LEVEL))
+    logger.setLevel(getattr(logging, settings.LOG_LEVEL))
 
     #Initialize log handler if not present already
     if not logger.handlers:
-        # Defining handler for logger
         file_handler = RotatingFileHandler(
-            filename=os.path.join(Config.LOG_DIR, f"{name}.log"),
-            maxBytes=Config.MAX_BYTES,
-            backupCount=Config.BACKUP_COUNT,
+            filename=os.path.join(settings.LOG_DIR, f"{name}.log"),
+            maxBytes=settings.MAX_BYTES,
+            backupCount=settings.BACKUP_COUNT,
             encoding="utf-8",
         )
 

@@ -12,7 +12,8 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from src.Config import Config
+from src.config import settings
+from src.utils import PipelineError
 from src.logger.logger import get_logger
 
 logger = get_logger("evaluate")
@@ -28,7 +29,7 @@ def evaluate_model():
         logger.info("Model evaluation started...")
 
         # Load test data
-        test_dir = os.path.join(Config.DATA_DIR, Config.PROCESSED_DATA_DIR)
+        test_dir = os.path.join(settings.DATA_DIR, settings.PROCESSED_DATA_DIR)
         x_test_path = os.path.join(test_dir, "x_test.csv")
         y_test_path = os.path.join(test_dir, "y_test.csv")
 
@@ -39,10 +40,10 @@ def evaluate_model():
         logger.debug(f"y_test shape: {y_test.shape}")
 
         # Load model
-        model_path = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR, "model.skops")
+        model_path = os.path.join(settings.artifact_path, "model.skops")
         if not os.path.exists(model_path):
             logger.error(f"Model file not found at {model_path}")
-            return
+            raise PipelineError(f"Model file not found at {model_path}")
 
         trusted = skio.get_untrusted_types(file=model_path)
         model = skio.load(model_path, trusted=trusted)
@@ -79,19 +80,19 @@ def evaluate_model():
             "roc_auc":   round(roc_auc,   4),
             "confusion_matrix": conf_mat,
         }
-        metrics_path = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR, "evaluation_metrics.json")
+        metrics_path = os.path.join(settings.artifact_path, "evaluation_metrics.json")
         with open(metrics_path, "w") as f:
             json.dump(metrics, f, indent=2)
         logger.info(f"Evaluation metrics saved to {metrics_path}")
 
         # MLflow Tracking
-        run_id_path = os.path.join(Config.DATA_DIR, Config.ARTIFACT_DIR, "run_id.txt")
+        run_id_path = os.path.join(settings.artifact_path, "run_id.txt")
         if os.path.exists(run_id_path):
             with open(run_id_path, "r") as f:
                 run_id = f.read().strip()
             
-            mlflow.set_tracking_uri(Config.MLFLOW_TRACKING_URI)
-            mlflow.set_experiment(Config.MLFLOW_EXPERIMENT_NAME)
+            mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
+            mlflow.set_experiment(settings.MLFLOW_EXPERIMENT_NAME)
             
             with mlflow.start_run(run_id=run_id):
                 mlflow.log_metrics({
@@ -107,6 +108,7 @@ def evaluate_model():
 
     except Exception as e:
         logger.error(e)
+        raise PipelineError(f"Unexpected error in evaluation: {e}") from e
 
 
 if __name__ == "__main__":

@@ -7,14 +7,18 @@ stages:
       hash: md5
       md5: cc6ec1db03b4f10f8de52c56ff48b085
       size: 1072063
-    - path: src/Config.py
+    - path: src/config.py
       hash: md5
-      md5: 54b002d17d6ce78bfa89e4c6db63fe17
-      size: 1258
+      md5: ec3d6f50e92b7f8363aa4e6c5dabc19f
+      size: 1115
     - path: src/data_ingestion.py
       hash: md5
-      md5: 7048178e2ff17ee5fa8cf5fbfd53ccf1
-      size: 1265
+      md5: 087cb093f8478dd80c621483d825ac62
+      size: 1483
+    - path: src/utils.py
+      hash: md5
+      md5: 1ec16c02539c1c4e48c4805b4c637a5f
+      size: 383
     outs:
     - path: data/test_data.csv
       hash: md5
@@ -35,13 +39,22 @@ stages:
       hash: md5
       md5: 70e48411eb591910a80276979a8c03cb
       size: 925517
+    - path: src/config.py
+      hash: md5
+      md5: ec3d6f50e92b7f8363aa4e6c5dabc19f
+      size: 1115
     - path: src/data_preprocessing.py
       hash: md5
-      md5: 8a6725aa6b502b4a015d0b058cd99ba5
-      size: 4830
+      md5: 0048b2d6e13b92329dc1b024cdccad74
+      size: 5082
+    - path: src/utils.py
+      hash: md5
+      md5: 1ec16c02539c1c4e48c4805b4c637a5f
+      size: 383
     params:
       params.yaml:
         data_preprocess:
+          target: Revenue
           features:
           - PageValues
           - ExitRates
@@ -57,7 +70,7 @@ stages:
     outs:
     - path: data/artifact/preprocessor.skops
       hash: md5
-      md5: 326eefbdb81f43c9323f9b1eb9eb28fb
+      md5: fea6c49071609019a7b6ea22f345a65e
       size: 75373
     - path: data/processed/x_test.csv
       hash: md5
@@ -102,10 +115,18 @@ stages:
       hash: md5
       md5: d6cda618bd5c6342a47727fc5edffbbb
       size: 11542
+    - path: src/config.py
+      hash: md5
+      md5: ec3d6f50e92b7f8363aa4e6c5dabc19f
+      size: 1115
     - path: src/train.py
       hash: md5
-      md5: d77ca3b3066021b213e1ac08cc9838a3
-      size: 3121
+      md5: 1197ce5983c55a62fa06f58b72feb350
+      size: 3176
+    - path: src/utils.py
+      hash: md5
+      md5: 1ec16c02539c1c4e48c4805b4c637a5f
+      size: 383
     params:
       params.yaml:
         train:
@@ -120,22 +141,22 @@ stages:
     outs:
     - path: data/artifact/model.skops
       hash: md5
-      md5: 5d735a3c50c646ae93ef86f3454151b1
+      md5: a99cdf7f961d865c3779519affc37f77
       size: 107549
     - path: data/artifact/run_id.txt
       hash: md5
-      md5: 8ae1bcdeace4e2d37b690f26bd7af560
+      md5: 4f56e2a713aeee260d69100d18ce911e
       size: 32
   evaluate:
     cmd: python -m src.evaluate
     deps:
     - path: data/artifact/model.skops
       hash: md5
-      md5: 5d735a3c50c646ae93ef86f3454151b1
+      md5: a99cdf7f961d865c3779519affc37f77
       size: 107549
     - path: data/artifact/run_id.txt
       hash: md5
-      md5: 8ae1bcdeace4e2d37b690f26bd7af560
+      md5: 4f56e2a713aeee260d69100d18ce911e
       size: 32
     - path: data/processed/x_test.csv
       hash: md5
@@ -145,10 +166,18 @@ stages:
       hash: md5
       md5: 013dd57e7e0a7aeb15b6aaba284382a4
       size: 14393
+    - path: src/config.py
+      hash: md5
+      md5: ec3d6f50e92b7f8363aa4e6c5dabc19f
+      size: 1115
     - path: src/evaluate.py
       hash: md5
-      md5: 46261632887def5f4ee05ee47dd16601
-      size: 4067
+      md5: 8c421b67bc156fb3d9e8633e2fb25a98
+      size: 4200
+    - path: src/utils.py
+      hash: md5
+      md5: 1ec16c02539c1c4e48c4805b4c637a5f
+      size: 383
     outs:
     - path: data/artifact/evaluation_metrics.json
       hash: md5
