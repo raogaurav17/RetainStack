@@ -1,5 +1,5 @@
 import pandas as pd
-import xgboost as xgb
+from src.models import get_model as get_model_from_registry
 import os
 import skops.io as skio
 import mlflow
@@ -32,16 +32,9 @@ def model_train():
         params = load_params(settings.PARAMS_FILE_PATH)
 
 
-        # defining model
-        model = xgb.XGBClassifier(
-            n_estimators=params['train']['n_estimators'],
-            learning_rate=params['train']['learning_rate'],
-            objective=params['train']['objective'],
-            eval_metric=params['train']['eval_metric'],
-            max_depth=params['train']['max_depth'],
-            subsample=params['train']['subsample'],
-            scale_pos_weight=params['train']['scale_pos_weight']
-        )
+        model_type = params['train'].get('model_type', 'xgboost')
+        model_params = params['train'].get(model_type, {})
+        model = get_model_from_registry(model_type, **model_params)
         logger.debug("Model Initialized")
 
         # training model
@@ -67,7 +60,8 @@ def model_train():
         mlflow.set_experiment(settings.MLFLOW_EXPERIMENT_NAME)
         
         with mlflow.start_run() as run:
-            mlflow.log_params(params['train'])
+            mlflow.log_param("model_type", model_type)
+            mlflow.log_params(model_params)
             mlflow.sklearn.log_model(
                 model,
                 artifact_path="model"

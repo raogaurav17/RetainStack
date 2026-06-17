@@ -119,10 +119,15 @@ stages:
       hash: md5
       md5: ec3d6f50e92b7f8363aa4e6c5dabc19f
       size: 1115
+    - path: src/models
+      hash: md5
+      md5: 16416f79c659ca47a427e93441eda897.dir
+      size: 2650
+      nfiles: 6
     - path: src/train.py
       hash: md5
-      md5: 1197ce5983c55a62fa06f58b72feb350
-      size: 3176
+      md5: 18ae8bbf6d0ba9c1f0fca312d2c0370f
+      size: 2994
     - path: src/utils.py
       hash: md5
       md5: 1ec16c02539c1c4e48c4805b4c637a5f
@@ -130,33 +135,40 @@ stages:
     params:
       params.yaml:
         train:
-          random_state: 42
-          n_estimators: 75
-          learning_rate: 0.05
-          objective: binary:logistic
-          eval_metric: auc
-          max_depth: 3
-          subsample: 0.3
-          scale_pos_weight: 2.9
+          model_type: random_forest
+          xgboost:
+            random_state: 42
+            n_estimators: 75
+            learning_rate: 0.05
+            objective: binary:logistic
+            eval_metric: auc
+            max_depth: 3
+            subsample: 0.3
+            scale_pos_weight: 2.9
+          random_forest:
+            random_state: 42
+            n_estimators: 100
+            max_depth: 10
+            min_samples_split: 2
     outs:
     - path: data/artifact/model.skops
       hash: md5
-      md5: a99cdf7f961d865c3779519affc37f77
-      size: 107549
+      md5: ce37b48b8d3cadc3d07b27051bf52b45
+      size: 5712607
     - path: data/artifact/run_id.txt
       hash: md5
-      md5: 4f56e2a713aeee260d69100d18ce911e
+      md5: 6e6bc9a0362f90f13835a037d9ced84a
       size: 32
   evaluate:
     cmd: python -m src.evaluate
     deps:
     - path: data/artifact/model.skops
       hash: md5
-      md5: a99cdf7f961d865c3779519affc37f77
-      size: 107549
+      md5: ce37b48b8d3cadc3d07b27051bf52b45
+      size: 5712607
     - path: data/artifact/run_id.txt
       hash: md5
-      md5: 4f56e2a713aeee260d69100d18ce911e
+      md5: 6e6bc9a0362f90f13835a037d9ced84a
       size: 32
     - path: data/processed/x_test.csv
       hash: md5
@@ -181,5 +193,5 @@ stages:
     outs:
     - path: data/artifact/evaluation_metrics.json
       hash: md5
-      md5: 46155c606a0b1dda5ce556fbbdc9d570
-      size: 199
+      md5: 5fa006d88206d8797b647dc3d0424b74
+      size: 200

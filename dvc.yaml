@@ -40,6 +40,7 @@ stages:
       - src/train.py
       - src/config.py
       - src/utils.py
+      - src/models
 
     params:
       - train
