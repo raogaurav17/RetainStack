@@ -270,7 +270,6 @@ Navigate to `http://127.0.0.1:5000` in your browser to view the `RetainStack_Exp
 ---
 
 ## Future Improvements
-
 - **Batch prediction endpoint** — `POST /api/v1/predict/batch` for bulk inference
 - **Model hot-reload** — Reload artifacts without restarting the server after a pipeline re-run
 - **Hyperparameter tuning** — Automated search with Optuna or scikit-learn `GridSearchCV`
