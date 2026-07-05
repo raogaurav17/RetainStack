@@ -5,15 +5,17 @@ RetainStack is an end-to-end MLOps pipeline for predicting online customer purch
 ## Features
 
 - **FastAPI Serving Layer** — Real-time and batch prediction API with health/readiness probes, Pydantic validation, and auto-generated OpenAPI docs
-- **DVC Pipeline** — Reproducible, parameterised stages for ingestion, preprocessing, training, and evaluation
+- **Server-Side Dynamic Batching** — Concurrent single-session requests are automatically coalesced into vectorised inference batches, flushed by queue size or timeout
+- **Client-Driven Batch Endpoint** — `POST /api/v1/predict/batch` accepts up to 500 sessions in a single request
+- **DVC Pipeline** — Reproducible, parameterised stages for ingestion, preprocessing, training, evaluation, and data drift detection
 - **MLflow Tracking** — Integrated experiment tracking for logging hyperparameters, model metrics, and artifacts to SQLite
 - **Secure Serialization** — Replaced `pickle`/`joblib` with `skops` for secure model persistence to prevent arbitrary code execution
 - **Data Versioning** — Raw data and model artifacts tracked and stored on AWS S3 via DVC
-- **XGBoost Classifier** — Tuned binary classifier with class-imbalance handling
 - **Full Evaluation Metrics** — Accuracy, Precision, Recall, F1, ROC-AUC, and confusion matrix persisted as DVC metrics
+- **Data Drift Detection** — Evidently-powered drift report saved as HTML and JSON, with summary metrics logged to MLflow
 - **Rotating File Logging** — Per-module logs written to `logs/` with configurable log level and rotation
 - **CI/CD** — GitHub Actions workflow that pulls data, reproduces the pipeline, and pushes artifacts
-- **Environment-configurable** — All paths, split ratios, and hyperparameters overridable via environment variables or `params.yaml`
+- **Environment-configurable** — All paths, split ratios, hyperparameters, and batching knobs overridable via environment variables or `params.yaml`
 
 ---
 
@@ -56,30 +58,34 @@ RetainStack/
 │   ├── test_data.csv          # Test split (DVC-tracked)
 │   ├── processed/             # Preprocessed feature/label CSVs
 │   └── artifact/
-│       ├── preprocessor.skops # Fitted ColumnTransformer
-│       ├── model.skops        # Trained XGBoost model
-│       └── evaluation_metrics.json
+│       ├── preprocessor.skops        # Fitted ColumnTransformer
+│       ├── model.skops               # Trained model
+│       ├── evaluation_metrics.json
+│       ├── data_drift_report.html    # Evidently drift report
+│       └── data_drift_report.json
 ├── Experiments/               # Exploratory notebooks
 │   ├── data_exploration.ipynb
 │   └── model_training.ipynb
 ├── src/
 │   ├── api/
 │   │   ├── app.py             # FastAPI application factory + lifespan
-│   │   ├── dependencies.py    # Model/preprocessor loading & DI
+│   │   ├── batcher.py         # Server-side dynamic request batcher
+│   │   ├── dependencies.py    # ModelStore loading & DI
 │   │   ├── routes/
 │   │   │   ├── health.py      # GET /health, /ready
-│   │   │   └── predict.py     # POST /predict
+│   │   │   └── predict.py     # POST /predict, POST /predict/batch
 │   │   └── schemas/
 │   │       ├── request.py     # Pydantic input validation
 │   │       └── response.py    # Pydantic response models
 │   ├── logger/
 │   │   └── logger.py          # Rotating file + console logger
-│   ├── Config.py              # Centralised configuration (env-overridable)
+│   ├── config.py              # Centralised configuration (env-overridable)
 │   ├── data_ingestion.py      # Loads raw data and produces train/test splits
 │   ├── data_preprocessing.py  # Feature engineering and scaling
-│   ├── train.py               # XGBoost model training
+│   ├── data_drift.py          # Evidently data drift detection and MLflow logging
+│   ├── train.py               # Model training
 │   └── evaluate.py            # Full model evaluation + metric persistence
-├── main.py                    # End-to-end pipeline orchestrator
+├── main.py                    # API server entry point
 ├── dvc.yaml                   # DVC pipeline stage definitions
 ├── dvc.lock                   # DVC pipeline lock file
 ├── params.yaml                # Hyperparameters and feature config
@@ -146,6 +152,7 @@ python -m src.data_ingestion
 python -m src.data_preprocessing
 python -m src.train
 python -m src.evaluate
+python -m src.data_drift
 ```
 
 ---
@@ -285,8 +292,8 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/predict/batch \
 
 | File | Purpose |
 |---|---|
-| `params.yaml` | Feature list, categorical features, XGBoost hyperparameters |
-| `src/Config.py` | Directory paths and split ratios — all values are overridable via environment variables |
+| `params.yaml` | Feature list, categorical features, model hyperparameters |
+| `src/config.py` | Directory paths, split ratios, and batching settings — all overridable via environment variables |
 | `dvc.yaml` | Pipeline stage definitions, dependencies, outputs, and metric declarations |
 
 ### Key Environment Variables
@@ -344,8 +351,9 @@ Navigate to `http://127.0.0.1:5000` in your browser to view the `RetainStack_Exp
 - **Model hot-reload** — Reload artifacts without restarting the server after a pipeline re-run
 - **Hyperparameter tuning** — Automated search with Optuna or scikit-learn `GridSearchCV`
 - **Data validation** — Schema checks on ingested data with `pandera` or `great_expectations`
-- **Drift monitoring** — Alerting when feature or prediction distributions shift in production
+- **Drift alerting** — Trigger automated retraining or notifications when drift is detected
 - **Extended feature set** — Evaluate dropped features (`VisitorType`, `Weekend`, `SpecialDay`, etc.)
+- **Rate limiting** — Add `slowapi` middleware to guard prediction endpoints against request flooding
 - **Cloud deployment** — AWS SageMaker or GCP Vertex AI integration
 
 ---
