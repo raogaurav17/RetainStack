@@ -46,7 +46,7 @@ class ModelStore:
         logger.info("Preprocessor loaded from %s", preprocessor_path)
 
 
-# Module-level singleton - populated by the lifespan handler in app.py
+# Singleton instance populated during startup lifespan
 _store = ModelStore()
 
 def get_model_store() -> ModelStore:

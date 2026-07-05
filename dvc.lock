@@ -9,12 +9,12 @@ stages:
       size: 1072063
     - path: src/config.py
       hash: md5
-      md5: ec3d6f50e92b7f8363aa4e6c5dabc19f
-      size: 1115
+      md5: a2dc7d6be300777aa4c8dfd0e5c14682
+      size: 1190
     - path: src/data_ingestion.py
       hash: md5
-      md5: 087cb093f8478dd80c621483d825ac62
-      size: 1483
+      md5: 6be8a9c1c8abeaee1543b3918ad75405
+      size: 1447
     - path: src/utils.py
       hash: md5
       md5: 1ec16c02539c1c4e48c4805b4c637a5f
@@ -41,12 +41,12 @@ stages:
       size: 925517
     - path: src/config.py
       hash: md5
-      md5: ec3d6f50e92b7f8363aa4e6c5dabc19f
-      size: 1115
+      md5: a2dc7d6be300777aa4c8dfd0e5c14682
+      size: 1190
     - path: src/data_preprocessing.py
       hash: md5
-      md5: 0048b2d6e13b92329dc1b024cdccad74
-      size: 5082
+      md5: 1cb95c746bf784d7b237a4ab599e9d85
+      size: 4915
     - path: src/utils.py
       hash: md5
       md5: 1ec16c02539c1c4e48c4805b4c637a5f
@@ -70,7 +70,7 @@ stages:
     outs:
     - path: data/artifact/preprocessor.skops
       hash: md5
-      md5: fea6c49071609019a7b6ea22f345a65e
+      md5: 01b6c20cb7572dc6bc4fdb07029ffdad
       size: 75373
     - path: data/processed/x_test.csv
       hash: md5
@@ -117,8 +117,8 @@ stages:
       size: 11542
     - path: src/config.py
       hash: md5
-      md5: ec3d6f50e92b7f8363aa4e6c5dabc19f
-      size: 1115
+      md5: a2dc7d6be300777aa4c8dfd0e5c14682
+      size: 1190
     - path: src/models
       hash: md5
       md5: 16416f79c659ca47a427e93441eda897.dir
@@ -126,8 +126,8 @@ stages:
       nfiles: 6
     - path: src/train.py
       hash: md5
-      md5: 18ae8bbf6d0ba9c1f0fca312d2c0370f
-      size: 2994
+      md5: bc80ae68fc676fe2785e6defc7bfc365
+      size: 2949
     - path: src/utils.py
       hash: md5
       md5: 1ec16c02539c1c4e48c4805b4c637a5f
@@ -153,22 +153,22 @@ stages:
     outs:
     - path: data/artifact/model.skops
       hash: md5
-      md5: ce37b48b8d3cadc3d07b27051bf52b45
+      md5: 351a206d4d14abe0216f976955272c4d
       size: 5712607
     - path: data/artifact/run_id.txt
       hash: md5
-      md5: 6e6bc9a0362f90f13835a037d9ced84a
+      md5: 1e3b363a8246ec7ec688cc9509e077a5
       size: 32
   evaluate:
     cmd: python -m src.evaluate
     deps:
     - path: data/artifact/model.skops
       hash: md5
-      md5: ce37b48b8d3cadc3d07b27051bf52b45
+      md5: 351a206d4d14abe0216f976955272c4d
       size: 5712607
     - path: data/artifact/run_id.txt
       hash: md5
-      md5: 6e6bc9a0362f90f13835a037d9ced84a
+      md5: 1e3b363a8246ec7ec688cc9509e077a5
       size: 32
     - path: data/processed/x_test.csv
       hash: md5
@@ -180,12 +180,12 @@ stages:
       size: 14393
     - path: src/config.py
       hash: md5
-      md5: ec3d6f50e92b7f8363aa4e6c5dabc19f
-      size: 1115
+      md5: a2dc7d6be300777aa4c8dfd0e5c14682
+      size: 1190
     - path: src/evaluate.py
       hash: md5
-      md5: 8c421b67bc156fb3d9e8633e2fb25a98
-      size: 4200
+      md5: 09c7082af48fc4fb85fe7888b69f8acc
+      size: 4069
     - path: src/utils.py
       hash: md5
       md5: 1ec16c02539c1c4e48c4805b4c637a5f
@@ -195,3 +195,35 @@ stages:
       hash: md5
       md5: 5fa006d88206d8797b647dc3d0424b74
       size: 200
+  data_drift:
+    cmd: python -m src.data_drift
+    deps:
+    - path: data/test_data.csv
+      hash: md5
+      md5: 9a9328e097931b23510abf0b9332a0de
+      size: 231669
+    - path: data/train_data.csv
+      hash: md5
+      md5: 70e48411eb591910a80276979a8c03cb
+      size: 925517
+    - path: src/config.py
+      hash: md5
+      md5: a2dc7d6be300777aa4c8dfd0e5c14682
+      size: 1190
+    - path: src/data_drift.py
+      hash: md5
+      md5: cbe00fcd01bf530a63ac90d5550d2ff9
+      size: 3667
+    - path: src/utils.py
+      hash: md5
+      md5: 1ec16c02539c1c4e48c4805b4c637a5f
+      size: 383
+    outs:
+    - path: data/artifact/data_drift_report.html
+      hash: md5
+      md5: e5ad8e30b40a3b906a742a550841cb54
+      size: 4582447
+    - path: data/artifact/data_drift_report.json
+      hash: md5
+      md5: 78b429cd91bdff3775e3bfeb7145123e
+      size: 5582

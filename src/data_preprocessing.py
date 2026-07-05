@@ -11,31 +11,24 @@ import skops.io as skio
 logger = get_logger("data_preprocessing")
 
 def preprocess_data() -> None:
-    """
-    This function is used for preprocessing the raw data
-    :return: None
-    """
+    """Preprocess train/test splits, fit/apply preprocessing pipeline, and save splits."""
     try:
-        # defining raw data file path
         train_data_path = os.path.join(settings.DATA_DIR, settings.TRAIN_DATA_FILE)
         test_data_path = os.path.join(settings.DATA_DIR, settings.TEST_DATA_FILE)
         logger.info(f"Preprocessing raw data from {train_data_path} and {test_data_path}...")
 
-        # Converting data to DataFrame
         temp_train_data = pd.read_csv(train_data_path)
         logger.debug(f"Data Fetched Successfully from {train_data_path}")
         test_data = pd.read_csv(test_data_path)
         logger.debug(f"Data Fetched Successfully from {test_data_path}")
 
-        # Splitting temporary train data to train and validation data
+        # Split training data into train and validation sets
         train_data, val_data = train_test_split(temp_train_data, test_size=settings.TRAIN_VAL_SPLIT_RATIO, random_state=42)
         logger.debug(f"Train and test data split Successfully Successfully from {train_data_path}")
 
-        # getting column names from params.yaml
         params = load_params(settings.PARAMS_FILE_PATH)
         target_col = params['data_preprocess']['target']
         
-        # Splitting input and output column
         x_train = train_data.drop(columns=[target_col])
         x_val = val_data.drop(columns=[target_col])
         x_test = test_data.drop(columns=[target_col])
@@ -49,20 +42,19 @@ def preprocess_data() -> None:
         numerical_features = [i for i in cols if i not in categorical_features]
         logger.info("Features params accessed successfully")
 
-        # Checking all columns are present or not
+        # Validate that all expected columns are present
         missing_cols = [col for col in cols if col not in x_train.columns]
         if missing_cols:
             logger.error(f"Missing columns in training data: {missing_cols}")
             raise PipelineError(f"Missing columns in training data: {missing_cols}")
 
-
-        #defining a ColumnTransformer object for pipeline
+        # Define preprocessing pipeline
         preprocessor = ColumnTransformer(transformers=[
             ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
             ('num', MinMaxScaler(), numerical_features)
         ])
 
-        # Transforming columns
+        # Fit and transform features
         preprocessor.fit(x_train)
         x_train = preprocessor.transform(x_train)
         x_val = preprocessor.transform(x_val)
@@ -70,16 +62,16 @@ def preprocess_data() -> None:
         logger.info(f"Features transformed Successfully into {len(cols)} features")
         logger.debug(f"x_train shape: {x_train.shape}, x_val shape: {x_val.shape}, x_test shape: {x_test.shape}")
 
-        # Converting inputs back to DataFrame
+        # Convert matrices back to pandas DataFrames with correct feature names
         ct_ft = preprocessor.named_transformers_['cat'].get_feature_names_out(categorical_features)
         all_ft = list(ct_ft) + numerical_features
         x_train = pd.DataFrame(x_train, columns=all_ft)
         x_val = pd.DataFrame(x_val, columns=all_ft)
         x_test = pd.DataFrame(x_test, columns=all_ft)
 
-        # defining preprocessed dir
+        # Save processed datasets
         processed_dir = os.path.join(settings.DATA_DIR, settings.PROCESSED_DATA_DIR)
-        os.makedirs(processed_dir, exist_ok=True)  # Required before saving CSVs
+        os.makedirs(processed_dir, exist_ok=True)
         x_train.to_csv(os.path.join(processed_dir, "x_train.csv"), index=False)
         x_val.to_csv(os.path.join(processed_dir, "x_val.csv"), index=False)
         x_test.to_csv(os.path.join(processed_dir, "x_test.csv"), index=False)
@@ -87,13 +79,12 @@ def preprocess_data() -> None:
         y_val.to_csv(os.path.join(processed_dir, "y_val.csv"), index=False)
         y_test.to_csv(os.path.join(processed_dir, "y_test.csv"), index=False)
 
-        # Storing ColumnTransformer Artifact
+        # Save fitted preprocessor pipeline as skops artifact
         artifact_dir = settings.artifact_path
         os.makedirs(artifact_dir, exist_ok=True)
         preprocessor_path = os.path.join(artifact_dir, "preprocessor.skops")
         skio.dump(preprocessor, preprocessor_path)
         logger.info(f"Preprocessor saved successfully at {preprocessor_path}")
-
 
         logger.info(f"Data Preprocessing Successfully into {processed_dir}")
         return

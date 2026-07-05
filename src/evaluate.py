@@ -19,12 +19,7 @@ from src.logger.logger import get_logger
 logger = get_logger("evaluate")
 
 def evaluate_model():
-    """
-    This function evaluates the trained model on test data.
-    It logs and persists accuracy, precision, recall, F1, ROC-AUC,
-    the classification report, and the confusion matrix.
-    :return: None
-    """
+    """Evaluate the trained model on test data, persist metrics, and log to MLflow."""
     try:
         logger.info("Model evaluation started...")
 

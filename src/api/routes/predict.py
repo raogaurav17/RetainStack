@@ -2,6 +2,7 @@ import yaml
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from src.api.batcher import DynamicBatcher, _confidence_label, get_batcher
 from src.api.dependencies import ModelStore, get_model_store
 from src.api.schemas.request import BatchSessionRequest, SessionFeatures
 from src.api.schemas.response import BatchPredictionResult, ErrorResponse, PredictionResult
@@ -22,14 +23,6 @@ def _load_feature_order() -> list[str]:
 _RAW_FEATURE_ORDER = _load_feature_order()
 
 
-def _confidence_label(probability: float) -> str:
-    """Map a purchase probability to a human-readable confidence bucket."""
-    if probability >= 0.75:
-        return "high"
-    if probability >= 0.40:
-        return "medium"
-    return "low"
-
 
 @router.post(
     "",
@@ -39,13 +32,15 @@ def _confidence_label(probability: float) -> str:
     },
     summary="Predict purchase intent",
     description=(
-        "Accept raw session features, apply the fitted preprocessor, and "
-        "return the model's binary prediction with a purchase probability."
+        "Accept raw session features and return the model's binary prediction "
+        "with a purchase probability. Requests are automatically coalesced by "
+        "the server-side dynamic batcher for efficient vectorised inference."
     ),
 )
 async def predict(
     session: SessionFeatures,
     store: ModelStore = Depends(get_model_store),
+    batcher: DynamicBatcher = Depends(get_batcher),
 ) -> PredictionResult:
     if not store.is_ready:
         raise HTTPException(
@@ -54,13 +49,10 @@ async def predict(
         )
 
     raw_dict = session.model_dump()
-    row = {col: [raw_dict[col]] for col in _RAW_FEATURE_ORDER}
-    df = pd.DataFrame(row)
+    row = {col: raw_dict[col] for col in _RAW_FEATURE_ORDER}
 
     try:
-        transformed = store.preprocessor.transform(df)
-        prediction = int(store.model.predict(transformed)[0])
-        probability = float(store.model.predict_proba(transformed)[0, 1])
+        result = await batcher.submit(row)
     except Exception as exc:
         logger.error("Prediction failed: %s", exc)
         raise HTTPException(
@@ -70,16 +62,12 @@ async def predict(
 
     logger.info(
         "Prediction: %d | Probability: %.4f | Month: %s",
-        prediction,
-        probability,
+        result.prediction,
+        result.purchase_probability,
         session.Month,
     )
 
-    return PredictionResult(
-        prediction=prediction,
-        purchase_probability=round(probability, 4),
-        confidence=_confidence_label(probability),
-    )
+    return result
 
 
 @router.post(
@@ -107,8 +95,7 @@ async def predict_batch(
             detail="Model or preprocessor not loaded. Check /ready.",
         )
 
-    # Build one DataFrame from all sessions — single transform/predict call
-    # is much faster than looping over individual sessions.
+    # Extract and order session features for vectorized inference
     rows = [
         {col: raw_dict[col] for col in _RAW_FEATURE_ORDER}
         for raw_dict in (s.model_dump() for s in body.sessions)

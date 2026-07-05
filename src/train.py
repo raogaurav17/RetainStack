@@ -12,43 +12,38 @@ from src.logger.logger import get_logger
 logger = get_logger("train")
 
 def model_train():
-    """
-    This function is used to train the model and save the model
-    :return: None
-        """
+    """Train the configured model type and log parameters/artifacts to MLflow."""
     try:
         logger.info("Model training started...")
 
-        #processed data paths
+        # Load processed datasets
         processed_dir = os.path.join(settings.DATA_DIR, settings.PROCESSED_DATA_DIR)
-        os.makedirs(processed_dir, exist_ok=True)  # Required before saving CSVs
+        os.makedirs(processed_dir, exist_ok=True)
         x_train = pd.read_csv(os.path.join(processed_dir, "x_train.csv"))
         x_val = pd.read_csv(os.path.join(processed_dir, "x_val.csv"))
         y_train = pd.read_csv(os.path.join(processed_dir, "y_train.csv"))
         y_val = pd.read_csv(os.path.join(processed_dir, "y_val.csv"))
         logger.debug("Training and validation data loaded...")
 
-        # getting params
         params = load_params(settings.PARAMS_FILE_PATH)
-
 
         model_type = params['train'].get('model_type', 'xgboost')
         model_params = params['train'].get(model_type, {})
         model = get_model_from_registry(model_type, **model_params)
         logger.debug("Model Initialized")
 
-        # training model
+        # Train model
         model.fit(x_train, y_train)
         logger.debug("Model Trained")
 
-        # testing on validation data
+        # Predict and evaluate on validation set
         y_pred = model.predict(x_val)
         logger.info(classification_report(y_val, y_pred))
         accuracy = accuracy_score(y_val, y_pred)
         logger.info("Accuracy: {}".format(accuracy))
         logger.info(f"\nConfusion matrix: {confusion_matrix(y_val, y_pred)}")
 
-        # saving model
+        # Save model artifact using skops
         artifact_dir = settings.artifact_path
         os.makedirs(artifact_dir, exist_ok=True)
         model_path = os.path.join(artifact_dir, "model.skops")

@@ -4,7 +4,7 @@ RetainStack is an end-to-end MLOps pipeline for predicting online customer purch
 
 ## Features
 
-- **FastAPI Serving Layer** — Real-time prediction API with health/readiness probes, Pydantic validation, and auto-generated OpenAPI docs
+- **FastAPI Serving Layer** — Real-time and batch prediction API with health/readiness probes, Pydantic validation, and auto-generated OpenAPI docs
 - **DVC Pipeline** — Reproducible, parameterised stages for ingestion, preprocessing, training, and evaluation
 - **MLflow Tracking** — Integrated experiment tracking for logging hyperparameters, model metrics, and artifacts to SQLite
 - **Secure Serialization** — Replaced `pickle`/`joblib` with `skops` for secure model persistence to prevent arbitrary code execution
@@ -174,7 +174,21 @@ Interactive API docs are available at [http://127.0.0.1:8000/docs](http://127.0.
 |---|---|---|
 | `GET` | `/api/v1/health` | Liveness probe — returns `{"status": "ok"}` |
 | `GET` | `/api/v1/ready` | Readiness probe — confirms model & preprocessor are loaded |
-| `POST` | `/api/v1/predict` | Predict purchase intent for a single session |
+| `POST` | `/api/v1/predict` | Predict purchase intent for a **single** session (dynamically batched) |
+| `POST` | `/api/v1/predict/batch` | Predict purchase intent for **1–500 sessions** in one request |
+
+### Dynamic batching (`/api/v1/predict`)
+
+The single-session endpoint uses **server-side dynamic batching**: rather than running a separate inference pass per request, the server accumulates concurrent requests in an internal queue and flushes them together through the model as a vectorised batch. This is transparent to callers — each request still gets back exactly one result.
+
+A batch is flushed when either condition fires first:
+
+| Condition | Default | Env var |
+|---|---|---|
+| Queue reaches this many requests | `32` | `BATCH_MAX_SIZE` |
+| This many ms have elapsed since the first request joined the batch | `50` | `BATCH_TIMEOUT_MS` |
+
+The `/api/v1/predict/batch` endpoint is **client-driven** and bypasses the internal batcher — it scores all submitted sessions immediately in a single pass.
 
 ### Example prediction request
 
@@ -210,6 +224,61 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/predict \
 | `purchase_probability` | Model's probability estimate (0–1) |
 | `confidence` | `high` (≥ 0.75), `medium` (≥ 0.40), or `low` (< 0.40) |
 
+### Batch prediction request
+
+Send up to **500 sessions** in a single call. The response preserves input order.
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/v1/predict/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessions": [
+      {
+        "Administrative": 0,
+        "Administrative_Duration": 0.0,
+        "Informational_Duration": 0.0,
+        "ProductRelated": 53,
+        "ProductRelated_Duration": 1482.5,
+        "BounceRates": 0.02,
+        "ExitRates": 0.05,
+        "PageValues": 8.15,
+        "Month": "Nov"
+      },
+      {
+        "Administrative": 1,
+        "Administrative_Duration": 30.0,
+        "Informational_Duration": 5.0,
+        "ProductRelated": 10,
+        "ProductRelated_Duration": 300.0,
+        "BounceRates": 0.10,
+        "ExitRates": 0.15,
+        "PageValues": 0.0,
+        "Month": "Feb"
+      }
+    ]
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "predictions": [
+    {"prediction": 1, "purchase_probability": 0.5546, "confidence": "medium"},
+    {"prediction": 0, "purchase_probability": 0.1823, "confidence": "low"}
+  ],
+  "total": 2
+}
+```
+
+| Response Field | Description |
+|---|---|
+| `predictions` | Ordered list of results — one entry per input session |
+| `total` | Number of sessions scored in the request |
+| `prediction` | `1` = purchase predicted, `0` = no purchase |
+| `purchase_probability` | Model's probability estimate (0–1) |
+| `confidence` | `high` (≥ 0.75), `medium` (≥ 0.40), or `low` (< 0.40) |
+
 ---
 
 ## Configuration
@@ -229,6 +298,8 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/predict \
 | `TRAIN_VAL_SPLIT_RATIO` | `0.2` | Fraction of training data held out as validation set |
 | `LOG_LEVEL` | `DEBUG` | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
 | `LOG_DIR` | `logs` | Directory where log files are written |
+| `BATCH_MAX_SIZE` | `32` | Flush the dynamic batch queue when this many requests are queued |
+| `BATCH_TIMEOUT_MS` | `50` | Flush the dynamic batch queue after this many milliseconds |
 
 ---
 
@@ -270,7 +341,6 @@ Navigate to `http://127.0.0.1:5000` in your browser to view the `RetainStack_Exp
 ---
 
 ## Future Improvements
-- **Batch prediction endpoint** — `POST /api/v1/predict/batch` for bulk inference
 - **Model hot-reload** — Reload artifacts without restarting the server after a pipeline re-run
 - **Hyperparameter tuning** — Automated search with Optuna or scikit-learn `GridSearchCV`
 - **Data validation** — Schema checks on ingested data with `pandera` or `great_expectations`
