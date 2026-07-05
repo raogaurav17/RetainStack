@@ -66,3 +66,51 @@ class SessionFeatures(BaseModel):
             ]
         }
     }
+
+
+class BatchSessionRequest(BaseModel):
+    """A batch of e-commerce session features for bulk prediction.
+
+    Enforces a minimum of 1 and a maximum of 500 sessions per request to
+    prevent empty payloads and guard against DoS via oversized requests.
+    """
+
+    sessions: list[SessionFeatures] = Field(
+        ...,
+        min_length=1,
+        max_length=500,
+        description="List of 1–500 session feature objects to score in one call",
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "sessions": [
+                        {
+                            "Administrative": 0,
+                            "Administrative_Duration": 0.0,
+                            "Informational_Duration": 0.0,
+                            "ProductRelated": 53,
+                            "ProductRelated_Duration": 1482.5,
+                            "BounceRates": 0.02,
+                            "ExitRates": 0.05,
+                            "PageValues": 8.15,
+                            "Month": "Nov",
+                        },
+                        {
+                            "Administrative": 1,
+                            "Administrative_Duration": 30.0,
+                            "Informational_Duration": 5.0,
+                            "ProductRelated": 10,
+                            "ProductRelated_Duration": 300.0,
+                            "BounceRates": 0.10,
+                            "ExitRates": 0.15,
+                            "PageValues": 0.0,
+                            "Month": "Feb",
+                        },
+                    ]
+                }
+            ]
+        }
+    }

@@ -17,6 +17,21 @@ class PredictionResult(BaseModel):
     )
 
 
+class BatchPredictionResult(BaseModel):
+    """Batch prediction output returned by /api/v1/predict/batch.
+
+    Contains one PredictionResult per input session, in the same order as the
+    request, along with a convenience `total` count.
+    """
+
+    predictions: list[PredictionResult] = Field(
+        ..., description="Ordered list of predictions — one per input session"
+    )
+    total: int = Field(
+        ..., ge=1, description="Number of sessions scored in this request"
+    )
+
+
 class HealthResponse(BaseModel):
     """Response from /health."""
 

@@ -11,6 +11,18 @@ stages:
       - data/test_data.csv
       - data/train_data.csv
 
+  data_drift:
+    cmd: python -m src.data_drift
+    deps:
+      - data/train_data.csv
+      - data/test_data.csv
+      - src/data_drift.py
+      - src/config.py
+      - src/utils.py
+    outs:
+      - data/artifact/data_drift_report.html
+      - data/artifact/data_drift_report.json
+
   data_preprocessing:
     cmd: python -m src.data_preprocessing
     deps:
