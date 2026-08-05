@@ -311,7 +311,6 @@ def _print_errors(stats: EndpointStats, max_show: int = 5) -> None:
 
 
 # Main orchestration
-
 async def run_stress_test(args: argparse.Namespace) -> int:
     base_url = f"http://{args.host}:{args.port}"
 
