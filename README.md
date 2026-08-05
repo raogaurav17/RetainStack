@@ -13,6 +13,7 @@ RetainStack is an end-to-end MLOps pipeline for predicting online customer purch
 - **Data Versioning** — Raw data and model artifacts tracked and stored on AWS S3 via DVC
 - **Full Evaluation Metrics** — Accuracy, Precision, Recall, F1, ROC-AUC, and confusion matrix persisted as DVC metrics
 - **Data Drift Detection** — Evidently-powered drift report saved as HTML and JSON, with summary metrics logged to MLflow
+- **Stress Test Script** — `stress_test.py` exercises all API endpoints with concurrent load, batch-size sweeps, a throughput burst, and Pydantic validation checks
 - **Rotating File Logging** — Per-module logs written to `logs/` with configurable log level and rotation
 - **CI/CD** — GitHub Actions workflow that pulls data, reproduces the pipeline, and pushes artifacts
 - **Environment-configurable** — All paths, split ratios, hyperparameters, and batching knobs overridable via environment variables or `params.yaml`
@@ -86,6 +87,7 @@ RetainStack/
 │   ├── train.py               # Model training
 │   └── evaluate.py            # Full model evaluation + metric persistence
 ├── main.py                    # API server entry point
+├── stress_test.py             # Async stress test for all API endpoints
 ├── dvc.yaml                   # DVC pipeline stage definitions
 ├── dvc.lock                   # DVC pipeline lock file
 ├── params.yaml                # Hyperparameters and feature config
@@ -285,6 +287,62 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/predict/batch \
 | `prediction` | `1` = purchase predicted, `0` = no purchase |
 | `purchase_probability` | Model's probability estimate (0–1) |
 | `confidence` | `high` (≥ 0.75), `medium` (≥ 0.40), or `low` (< 0.40) |
+
+---
+
+## Stress Testing
+
+`stress_test.py` is a self-contained async script that exercises every API endpoint under concurrent load and reports per-endpoint latency statistics.
+
+### Prerequisites
+
+`httpx` is already included in the project venv. `rich` is optional — install it for coloured tables and progress spinners:
+
+```bash
+uv add rich
+```
+
+### Run the stress test
+
+Start the API server first, then:
+
+```bash
+# Default run — 200 requests per phase, 50 concurrent
+uv run python stress_test.py
+
+# Heavier load with a 30-second throughput burst
+uv run python stress_test.py --total 500 --concurrency 100 --burst-duration 30
+
+# Reproducible run with a fixed random seed
+uv run python stress_test.py --seed 42
+```
+
+### Test phases
+
+| Phase | Endpoint | What is tested |
+|---|---|---|
+| 1 | `GET /api/v1/health` | Liveness probe under concurrent load |
+| 2 | `GET /api/v1/ready` | Readiness probe — confirms model and preprocessor are loaded |
+| 3 | `POST /api/v1/predict` | Single-session prediction — verifies the dynamic batcher coalesces concurrent requests |
+| 4 | `POST /api/v1/predict/batch` | Batch endpoint swept across configurable batch sizes (default: 1, 10, 50, 100) |
+| 5 | `POST /api/v1/predict/batch` | Maximum-load batch (500 sessions — the API hard cap) |
+| 6 | `POST /api/v1/predict` | Sustained throughput burst — fires requests for a fixed wall-clock duration and reports req/s |
+| 7 | `POST /api/v1/predict` | Pydantic validation — sends five malformed payloads and asserts each returns `HTTP 422` |
+
+### CLI flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--host` | `127.0.0.1` | API host |
+| `--port` | `8000` | API port |
+| `--concurrency` | `50` | Max concurrent in-flight requests |
+| `--total` | `200` | Requests per endpoint phase |
+| `--batch-sizes` | `1 10 50 100` | Batch sizes tested in Phase 4 |
+| `--burst-duration` | `10.0` | Wall-clock seconds for the throughput burst |
+| `--timeout` | `30.0` | Per-request timeout in seconds |
+| `--seed` | — | Random seed for reproducible payloads |
+
+The script exits with code `0` when every non-validation phase achieves ≥ 95% success rate, and `1` otherwise.
 
 ---
 

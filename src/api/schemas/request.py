@@ -4,7 +4,7 @@ Validates raw feature values before they reach the preprocessor pipeline.
 Field constraints are based on the Online Shoppers Purchasing Intention Dataset.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # Valid months present in the UCI dataset
@@ -48,6 +48,15 @@ class SessionFeatures(BaseModel):
     Month: str = Field(
         ..., description="Month of the visit (e.g. 'Feb', 'Mar', 'Nov')"
     )
+
+    @field_validator("Month")
+    @classmethod
+    def _validate_month(cls, v: str) -> str:
+        if v not in _VALID_MONTHS:
+            raise ValueError(
+                f"Month must be one of {sorted(_VALID_MONTHS)}, got {v!r}"
+            )
+        return v
 
     model_config = {
         "json_schema_extra": {
