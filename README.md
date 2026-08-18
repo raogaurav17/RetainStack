@@ -7,13 +7,14 @@ RetainStack is an end-to-end MLOps pipeline for predicting online customer purch
 - **FastAPI Serving Layer** — Real-time and batch prediction API with health/readiness probes, Pydantic validation, and auto-generated OpenAPI docs
 - **Server-Side Dynamic Batching** — Concurrent single-session requests are automatically coalesced into vectorised inference batches, flushed by queue size or timeout
 - **Client-Driven Batch Endpoint** — `POST /api/v1/predict/batch` accepts up to 500 sessions in a single request
+- **Thread-Safe Zero-Downtime Model Hot-Reload** — `POST /api/v1/model/reload` atomically swaps the active (model, preprocessor) pair without restarting the server or dropping in-flight requests; a SHA-256 artifact fingerprint and pre-flight dry-run inference gate every swap
 - **DVC Pipeline** — Reproducible, parameterised stages for ingestion, preprocessing, training, evaluation, and data drift detection
 - **MLflow Tracking** — Integrated experiment tracking for logging hyperparameters, model metrics, and artifacts to SQLite
 - **Secure Serialization** — Replaced `pickle`/`joblib` with `skops` for secure model persistence to prevent arbitrary code execution
 - **Data Versioning** — Raw data and model artifacts tracked and stored on AWS S3 via DVC
 - **Full Evaluation Metrics** — Accuracy, Precision, Recall, F1, ROC-AUC, and confusion matrix persisted as DVC metrics
 - **Data Drift Detection** — Evidently-powered drift report saved as HTML and JSON, with summary metrics logged to MLflow
-- **Stress Test Script** — `stress_test.py` exercises all API endpoints with concurrent load, batch-size sweeps, a throughput burst, and Pydantic validation checks
+- **Stress Test Script** — `stress_test.py` exercises all API endpoints with concurrent load, batch-size sweeps, a throughput burst, Pydantic validation checks, and a concurrent hot-reload safety phase (Phase 8)
 - **Rotating File Logging** — Per-module logs written to `logs/` with configurable log level and rotation
 - **CI/CD** — GitHub Actions workflow that pulls data, reproduces the pipeline, and pushes artifacts
 - **Environment-configurable** — All paths, split ratios, hyperparameters, and batching knobs overridable via environment variables or `params.yaml`
@@ -71,8 +72,9 @@ RetainStack/
 │   ├── api/
 │   │   ├── app.py             # FastAPI application factory + lifespan
 │   │   ├── batcher.py         # Server-side dynamic request batcher
-│   │   ├── dependencies.py    # ModelStore loading & DI
+│   │   ├── dependencies.py    # ArtifactContainer, thread-safe ModelStore, hot-reload logic
 │   │   ├── routes/
+│   │   │   ├── admin.py       # POST /model/reload — zero-downtime hot-reload
 │   │   │   ├── health.py      # GET /health, /ready
 │   │   │   └── predict.py     # POST /predict, POST /predict/batch
 │   │   └── schemas/
@@ -182,9 +184,10 @@ Interactive API docs are available at [http://127.0.0.1:8000/docs](http://127.0.
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/v1/health` | Liveness probe — returns `{"status": "ok"}` |
-| `GET` | `/api/v1/ready` | Readiness probe — confirms model & preprocessor are loaded |
+| `GET` | `/api/v1/ready` | Readiness probe — confirms model & preprocessor are loaded, exposes artifact version fingerprint and reload count |
 | `POST` | `/api/v1/predict` | Predict purchase intent for a **single** session (dynamically batched) |
 | `POST` | `/api/v1/predict/batch` | Predict purchase intent for **1–500 sessions** in one request |
+| `POST` | `/api/v1/model/reload` | Zero-downtime hot-reload of model & preprocessor artifacts — see [Admin Endpoints](#admin-endpoints) |
 
 ### Dynamic batching (`/api/v1/predict`)
 
@@ -233,7 +236,75 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/predict \
 | `purchase_probability` | Model's probability estimate (0–1) |
 | `confidence` | `high` (≥ 0.75), `medium` (≥ 0.40), or `low` (< 0.40) |
 
-### Batch prediction request
+---
+
+## Admin Endpoints
+
+### Zero-Downtime Model Hot-Reload
+
+After a DVC pipeline re-run produces new `model.skops` and `preprocessor.skops` artifacts, you can load them into the running server **without restarting** and **without dropping any in-flight requests**.
+
+#### How it works — three-phase atomic swap
+
+| Phase | What happens |
+|---|---|
+| **1. Load** | New `.skops` files are deserialised into a candidate `ArtifactContainer` (outside the lock — I/O is slow) |
+| **2. Pre-flight** | A synthetic dry-run inference pass is executed against the candidate to surface schema or compatibility issues before real traffic sees the new model |
+| **3. Swap** | The active artifact pointer is replaced atomically under a `threading.RLock`. In-flight requests always finish against the snapshot they captured at their own start — there is **zero torn-read risk** |
+
+If pre-flight fails, the live model is **never** replaced and the error is returned to the caller.
+
+Each artifact pair is identified by a **12-character SHA-256 fingerprint** computed from the raw bytes of both files. The fingerprint appears in logs, the `/ready` probe, and the reload response.
+
+#### Trigger a hot-reload
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/v1/model/reload | python3 -m json.tool
+```
+
+**Response:**
+
+```json
+{
+  "status": "ok",
+  "message": "Model hot-reload successful. Active artifact: 20fc576ceb04 (loaded at 2026-08-18T15:44:40.999861+00:00).",
+  "previous_version": "20fc576ceb04",
+  "new_version": "20fc576ceb04",
+  "reload_count": 1,
+  "preflight_latency_ms": 23.54
+}
+```
+
+| Response Field | Description |
+|---|---|
+| `status` | `ok` on success, `failed` on pre-flight or file error |
+| `previous_version` | SHA-256 fingerprint (12 chars) of the model that was active before reload |
+| `new_version` | SHA-256 fingerprint of the model now active |
+| `reload_count` | Total successful hot-reloads since server start |
+| `preflight_latency_ms` | Wall-clock time taken by the pre-flight dry-run (ms) |
+
+#### Check artifact version via `/ready`
+
+```bash
+curl -s http://127.0.0.1:8000/api/v1/ready | python3 -m json.tool
+```
+
+**Response:**
+
+```json
+{
+  "ready": true,
+  "model_loaded": true,
+  "preprocessor_loaded": true,
+  "artifact_version": "20fc576ceb04",
+  "reload_count": 1,
+  "loaded_at": "2026-08-18T15:44:40.999861+00:00"
+}
+```
+
+---
+
+## Batch prediction request
 
 Send up to **500 sessions** in a single call. The response preserves input order.
 
@@ -328,6 +399,7 @@ uv run python stress_test.py --seed 42
 | 5 | `POST /api/v1/predict/batch` | Maximum-load batch (500 sessions — the API hard cap) |
 | 6 | `POST /api/v1/predict` | Sustained throughput burst — fires requests for a fixed wall-clock duration and reports req/s |
 | 7 | `POST /api/v1/predict` | Pydantic validation — sends five malformed payloads and asserts each returns `HTTP 422` |
+| 8 | `POST /api/v1/predict` + `POST /api/v1/model/reload` | **Concurrent hot-reload safety** — fires N reload calls while 200 concurrent predictions run simultaneously; verifies 0 dropped requests and 100% prediction success rate during atomic pointer swaps |
 
 ### CLI flags
 
@@ -341,6 +413,7 @@ uv run python stress_test.py --seed 42
 | `--burst-duration` | `10.0` | Wall-clock seconds for the throughput burst |
 | `--timeout` | `30.0` | Per-request timeout in seconds |
 | `--seed` | — | Random seed for reproducible payloads |
+| `--reload-rounds` | `5` | Number of `POST /api/v1/model/reload` calls fired concurrently during Phase 8 |
 
 The script exits with code `0` when every non-validation phase achieves ≥ 95% success rate, and `1` otherwise.
 
@@ -406,13 +479,13 @@ Navigate to `http://127.0.0.1:5000` in your browser to view the `RetainStack_Exp
 ---
 
 ## Future Improvements
-- **Model hot-reload** — Reload artifacts without restarting the server after a pipeline re-run
 - **Hyperparameter tuning** — Automated search with Optuna or scikit-learn `GridSearchCV`
 - **Data validation** — Schema checks on ingested data with `pandera` or `great_expectations`
 - **Drift alerting** — Trigger automated retraining or notifications when drift is detected
 - **Extended feature set** — Evaluate dropped features (`VisitorType`, `Weekend`, `SpecialDay`, etc.)
 - **Rate limiting** — Add `slowapi` middleware to guard prediction endpoints against request flooding
 - **Cloud deployment** — AWS SageMaker or GCP Vertex AI integration
+- **Observability** — Prometheus `/metrics` endpoint with P95/P99 inference latency histograms and Grafana dashboard
 
 ---
 

@@ -11,6 +11,14 @@ fires first:
 
 Callers simply ``await batcher.submit(row)`` and block until the batch they
 were grouped into has been processed.
+
+Atomic Snapshot Guarantee
+--------------------------
+``_run_batch`` captures the active ``ArtifactContainer`` snapshot at the *top*
+of each flush cycle via ``store.get_artifacts()``.  This means every request
+in a flushed batch is always scored against the *same* (model, preprocessor)
+pair — even if a concurrent ``POST /api/v1/model/reload`` swaps the live
+pointer mid-flight.  There is no torn-read risk.
 """
 
 from __future__ import annotations
@@ -128,14 +136,36 @@ class DynamicBatcher:
             await self._run_batch(pending)
 
     async def _run_batch(self, pending: list[PendingRequest]) -> None:
-        """Run a single vectorised inference pass and resolve all futures."""
-        logger.info("Flushing batch of %d request(s)", len(pending))
+        """Run a single vectorised inference pass and resolve all futures.
+
+        An immutable ``ArtifactContainer`` snapshot is captured at the top of
+        this method so that all requests in the batch are scored against the
+        *same* matched (model, preprocessor) pair.  A concurrent hot-reload
+        swapping the live pointer will not affect this batch.
+        """
+        # Atomic snapshot — captured once, used for the entire batch.
+        # get_artifacts() holds the lock only for the pointer read, not during
+        # inference, so contention with reload() is near-zero.
+        try:
+            container = self._store.get_artifacts()
+        except RuntimeError as exc:
+            logger.error("Cannot flush batch — no artifacts loaded: %s", exc)
+            for p in pending:
+                if not p.future.done():
+                    p.future.set_exception(exc)
+            return
+
+        logger.info(
+            "Flushing batch of %d request(s) against artifact version=%s",
+            len(pending),
+            container.version,
+        )
         df = pd.DataFrame([p.row for p in pending])
 
         try:
-            transformed = self._store.preprocessor.transform(df)
-            raw_predictions = self._store.model.predict(transformed).tolist()
-            raw_probabilities = self._store.model.predict_proba(transformed)[:, 1].tolist()
+            transformed = container.preprocessor.transform(df)
+            raw_predictions = container.model.predict(transformed).tolist()
+            raw_probabilities = container.model.predict_proba(transformed)[:, 1].tolist()
         except Exception as exc:
             logger.error("Batch inference failed: %s", exc)
             for p in pending:

@@ -24,14 +24,33 @@ async def health() -> HealthResponse:
     summary="Readiness probe",
     description=(
         "Returns whether the model and preprocessor are loaded and the "
-        "service is ready to accept prediction requests."
+        "service is ready to accept prediction requests. "
+        "Also exposes the active artifact version fingerprint, the ISO-8601 "
+        "load timestamp, and the number of successful hot-reloads performed "
+        "since server start."
     ),
 )
 async def ready(
     store: ModelStore = Depends(get_model_store),
 ) -> ReadyResponse:
+    # Attempt to read enriched metadata from the active ArtifactContainer.
+    # Falls back to None fields gracefully if no artifacts are loaded yet.
+    artifact_version: str | None = None
+    loaded_at: str | None = None
+
+    if store.is_ready:
+        try:
+            container = store.get_artifacts()
+            artifact_version = container.version
+            loaded_at = container.loaded_at
+        except RuntimeError:
+            pass  # Between load cycles — report as not ready
+
     return ReadyResponse(
         ready=store.is_ready,
-        model_loaded=store.model is not None,
-        preprocessor_loaded=store.preprocessor is not None,
+        model_loaded=store.is_ready,
+        preprocessor_loaded=store.is_ready,
+        artifact_version=artifact_version,
+        reload_count=store.reload_count,
+        loaded_at=loaded_at,
     )

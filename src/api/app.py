@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from src.api.batcher import get_batcher
 from src.api.dependencies import get_model_store
 from src.api.routes import health, predict
+from src.api.routes import admin
 from src.api.routes.predict import _RAW_FEATURE_ORDER
 from src.logger.logger import get_logger
 
@@ -28,8 +29,6 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     await batcher.stop()
-    store.model = None
-    store.preprocessor = None
     logger.info("Artifacts released — shutting down.")
 
 
@@ -50,6 +49,7 @@ def create_app() -> FastAPI:
     # Routes
     app.include_router(health.router, prefix="/api/v1")
     app.include_router(predict.router, prefix="/api/v1")
+    app.include_router(admin.router, prefix="/api/v1")
 
     # Global exception handler
     @app.exception_handler(Exception)

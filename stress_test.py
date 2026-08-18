@@ -1,8 +1,8 @@
 """Async stress test for the RetainStack prediction API.
 
 Covers liveness, readiness, single-session prediction (dynamic batcher),
-batch prediction at various sizes, a sustained throughput burst, and
-Pydantic input-validation rejection checks.
+batch prediction at various sizes, a sustained throughput burst, Pydantic
+input-validation rejection checks, and a concurrent hot-reload safety test.
 
 Requirements (already in the project venv):
     httpx >= 0.28   (HTTP client)
@@ -14,6 +14,7 @@ Usage:
                           [--batch-sizes N [N ...]]
                           [--burst-duration S]
                           [--timeout S] [--seed N]
+                          [--reload-rounds N]
 """
 
 from __future__ import annotations
@@ -421,6 +422,80 @@ async def run_stress_test(args: argparse.Namespace) -> int:
     invalid_stats.name += f"  ({invalid_stats.total_requests} probes, expect HTTP 422)"
     all_stats.append(invalid_stats)
 
+    # ------------------------------------------------------------------
+    # Phase 8 — concurrent hot-reload safety test
+    # ------------------------------------------------------------------
+    # Fire a wave of concurrent single-session predictions while simultaneously
+    # triggering multiple hot-reloads.  Every prediction must still succeed
+    # (>= 95% success rate) proving that the atomic pointer swap never causes
+    # a torn read, deadlock, or dropped request.
+    _section(
+        f"Phase 8 -- Concurrent Hot-Reload Safety  "
+        f"({args.reload_rounds} reloads during {args.total} concurrent predictions)"
+    )
+
+    reload_url  = f"{base_url}/api/v1/model/reload"
+    predict_url = f"{base_url}/api/v1/predict"
+
+    predict_stats_reload = EndpointStats(name="POST /api/v1/predict [during hot-reload]")
+    reload_stats         = EndpointStats(name="POST /api/v1/model/reload")
+
+    sem_reload = asyncio.Semaphore(args.concurrency)
+
+    async def _predict_worker_reload() -> None:
+        async with sem_reload:
+            async with httpx.AsyncClient() as client:
+                await _post(client, predict_url, _rand_session(),
+                            predict_stats_reload, timeout=args.timeout)
+
+    async def _reload_worker() -> None:
+        """Issue a single reload and record success/failure."""
+        t0 = time.perf_counter()
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(reload_url, timeout=args.timeout)
+            elapsed = (time.perf_counter() - t0) * 1000
+            reload_stats.latencies_ms.append(elapsed)
+            reload_stats.total_requests += 1
+            if resp.is_success:
+                reload_stats.succeeded += 1
+                data = resp.json()
+                msg = (
+                    f"  Reload OK: {data.get('previous_version')} → "
+                    f"{data.get('new_version')}  "
+                    f"(preflight={data.get('preflight_latency_ms', '?')}ms, "
+                    f"count={data.get('reload_count')})"
+                )
+                if RICH:
+                    _console.print(f"[dim cyan]{msg}[/dim cyan]")
+                else:
+                    print(msg)
+            else:
+                reload_stats.failed += 1
+                reload_stats.errors.append(f"HTTP {resp.status_code}: {resp.text[:120]}")
+        except Exception as exc:
+            reload_stats.latencies_ms.append((time.perf_counter() - t0) * 1000)
+            reload_stats.total_requests += 1
+            reload_stats.failed += 1
+            reload_stats.errors.append(str(exc)[:80])
+
+    # Interleave reload calls among the prediction workers.
+    # Spacing: fire one reload roughly every (total / reload_rounds) predictions.
+    spacing = max(1, args.total // args.reload_rounds)
+    prediction_tasks = [asyncio.create_task(_predict_worker_reload())
+                        for _ in range(args.total)]
+    reload_tasks: list[asyncio.Task] = []
+
+    for i in range(args.reload_rounds):
+        # Small stagger so reloads are spread across the prediction wave
+        await asyncio.sleep(i * spacing * 0.01)
+        reload_tasks.append(asyncio.create_task(_reload_worker()))
+
+    await asyncio.gather(*prediction_tasks, *reload_tasks)
+
+    all_stats.append(predict_stats_reload)
+    all_stats.append(reload_stats)
+
     # Print results table
     _section("Results Summary")
     _print_table(all_stats)
@@ -437,9 +512,15 @@ async def run_stress_test(args: argparse.Namespace) -> int:
     for s in all_stats:
         _print_errors(s)
 
-    # Overall pass/fail — invalid-payload phase excluded from the gate
-    passed = all(s.success_rate >= 95 for s in all_stats
-                 if "invalid" not in s.name.lower())
+    # Overall pass/fail
+    # Excluded from gate: invalid-payload phase (expected failures) and the reload
+    # endpoint (which may legitimately fail 0 times if artifacts are unchanged).
+    excluded = ("invalid",)
+    passed = all(
+        s.success_rate >= 95
+        for s in all_stats
+        if not any(ex in s.name.lower() for ex in excluded)
+    )
     if passed:
         msg = "All service checks PASSED (>= 95% success rate)"
         if RICH:
@@ -477,6 +558,8 @@ def _parse_args() -> argparse.Namespace:
                         help="Per-request timeout in seconds")
     parser.add_argument("--seed",           type=int,   default=None,
                         help="Random seed for reproducible payloads")
+    parser.add_argument("--reload-rounds",  type=int,   default=5,
+                        help="Number of hot-reload calls fired during Phase 8")
     return parser.parse_args()
 
 

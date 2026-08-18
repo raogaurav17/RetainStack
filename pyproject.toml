@@ -17,4 +17,5 @@ dependencies = [
     "xgboost>=3.2.0",
     "pydantic-settings>=2.7.0",
     "evidently>=0.7.21",
+    "httpx>=0.28.1",
 ]

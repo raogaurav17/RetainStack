@@ -47,6 +47,35 @@ class ReadyResponse(BaseModel):
     preprocessor_loaded: bool = Field(
         ..., description="Whether preprocessor.skops is loaded in memory"
     )
+    artifact_version: str | None = Field(
+        None,
+        description="SHA-256 fingerprint of the currently active artifact pair (first 12 chars)",
+    )
+    reload_count: int = Field(
+        0, description="Number of successful hot-reloads performed since server start"
+    )
+    loaded_at: str | None = Field(
+        None, description="ISO-8601 UTC timestamp when the active artifacts were last loaded"
+    )
+
+
+class ReloadResponse(BaseModel):
+    """Response from POST /api/v1/model/reload."""
+
+    status: str = Field(..., description="'ok' on success, 'failed' on error")
+    message: str = Field(..., description="Human-readable outcome description")
+    previous_version: str | None = Field(
+        None, description="Artifact fingerprint of the model that was active before reload"
+    )
+    new_version: str | None = Field(
+        None, description="Artifact fingerprint of the model now active after reload"
+    )
+    reload_count: int = Field(
+        ..., description="Total successful hot-reloads performed since server start"
+    )
+    preflight_latency_ms: float | None = Field(
+        None, description="Wall-clock time taken by the pre-flight dry-run inference (ms)"
+    )
 
 
 class ErrorResponse(BaseModel):

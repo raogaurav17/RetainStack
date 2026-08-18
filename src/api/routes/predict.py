@@ -102,10 +102,22 @@ async def predict_batch(
     ]
     df = pd.DataFrame(rows)
 
+    # Capture an immutable artifact snapshot for this batch pass.
+    # Using get_artifacts() ensures we hold a consistent (model, preprocessor)
+    # pair even if a hot-reload swaps the live pointer mid-request.
     try:
-        transformed = store.preprocessor.transform(df)
-        predictions = store.model.predict(transformed).tolist()
-        probabilities = store.model.predict_proba(transformed)[:, 1].tolist()
+        container = store.get_artifacts()
+    except RuntimeError as exc:
+        logger.error("No artifacts available for batch prediction: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Model or preprocessor not loaded. Check /ready.",
+        ) from exc
+
+    try:
+        transformed = container.preprocessor.transform(df)
+        predictions = container.model.predict(transformed).tolist()
+        probabilities = container.model.predict_proba(transformed)[:, 1].tolist()
     except Exception as exc:
         logger.error("Batch prediction failed: %s", exc)
         raise HTTPException(
