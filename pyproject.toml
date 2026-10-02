@@ -18,4 +18,6 @@ dependencies = [
     "pydantic-settings>=2.7.0",
     "evidently>=0.7.21",
     "httpx>=0.28.1",
+    "seaborn>=0.13.2",
+    "ipykernel>=7.4.0",
 ]
