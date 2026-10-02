@@ -1,155 +1,168 @@
 # RetainStack
 
-RetainStack is an end-to-end MLOps pipeline for predicting online customer purchase intent. It uses an XGBoost binary classifier trained on e-commerce session data, with DVC for pipeline reproducibility and data versioning, MLflow for experiment tracking, and GitHub Actions for CI/CD automation.
+RetainStack is an end-to-end MLOps project for predicting whether a visitor to an e-commerce website will complete a purchase. It combines a production-ready FastAPI serving layer, reproducible DVC pipeline, experiment tracking with MLflow, and robust deployment patterns such as dynamic batching and zero-downtime model reloads.
 
-## Features
+The project is designed to mirror a realistic ML system lifecycle: ingest data, preprocess features, train a model, evaluate it, track metrics, serve predictions, and continually validate the service under load.
 
-- **FastAPI Serving Layer** — Real-time and batch prediction API with health/readiness probes, Pydantic validation, and auto-generated OpenAPI docs
-- **Server-Side Dynamic Batching** — Concurrent single-session requests are automatically coalesced into vectorised inference batches, flushed by queue size or timeout
-- **Client-Driven Batch Endpoint** — `POST /api/v1/predict/batch` accepts up to 500 sessions in a single request
-- **Thread-Safe Zero-Downtime Model Hot-Reload** — `POST /api/v1/model/reload` atomically swaps the active (model, preprocessor) pair without restarting the server or dropping in-flight requests; a SHA-256 artifact fingerprint and pre-flight dry-run inference gate every swap
-- **DVC Pipeline** — Reproducible, parameterised stages for ingestion, preprocessing, training, evaluation, and data drift detection
-- **MLflow Tracking** — Integrated experiment tracking for logging hyperparameters, model metrics, and artifacts to SQLite
-- **Secure Serialization** — Replaced `pickle`/`joblib` with `skops` for secure model persistence to prevent arbitrary code execution
-- **Data Versioning** — Raw data and model artifacts tracked and stored on AWS S3 via DVC
-- **Full Evaluation Metrics** — Accuracy, Precision, Recall, F1, ROC-AUC, and confusion matrix persisted as DVC metrics
-- **Data Drift Detection** — Evidently-powered drift report saved as HTML and JSON, with summary metrics logged to MLflow
-- **Stress Test Script** — `stress_test.py` exercises all API endpoints with concurrent load, batch-size sweeps, a throughput burst, Pydantic validation checks, and a concurrent hot-reload safety phase (Phase 8)
-- **Rotating File Logging** — Per-module logs written to `logs/` with configurable log level and rotation
-- **CI/CD** — GitHub Actions workflow that pulls data, reproduces the pipeline, and pushes artifacts
-- **Environment-configurable** — All paths, split ratios, hyperparameters, and batching knobs overridable via environment variables or `params.yaml`
+## Why this project?
+
+RetainStack is useful for learning and demonstration because it covers the full machine learning operations loop rather than only model training:
+
+- Data pipeline orchestration with DVC
+- Experiment tracking and model lineage with MLflow
+- Secure artifact serialization with `skops`
+- API serving with FastAPI and Pydantic validation
+- Advanced inference patterns such as dynamic batching and hot-reload
+- Operational checks with health probes, metrics, and stress testing
+
+---
+
+## Project highlights
+
+- FastAPI serving layer with health/readiness endpoints and OpenAPI docs
+- Server-side dynamic batching that groups concurrent single-session requests together
+- Client-driven batch prediction endpoint that accepts up to 500 sessions per request
+- Thread-safe, zero-downtime model hot-reload with artifact fingerprint verification
+- Reproducible DVC stages for ingestion, preprocessing, training, evaluation, and drift detection
+- MLflow tracking for parameters, metrics, and artifacts
+- Secure model persistence using `skops` instead of unsafe pickle-based serialization
+- DVC-managed data and artifact versioning with AWS S3 storage
+- Automated evaluation metrics including accuracy, precision, recall, F1, ROC-AUC, and confusion matrix
+- Drift reporting via Evidently and model monitoring summaries in MLflow
+- Stress testing for concurrent traffic, validation failures, throughput spikes, and reload safety
+- Rotating file logging and environment-driven configuration
+- CI/CD workflow to reproduce the pipeline and publish artifacts
 
 ---
 
 ## Dataset
 
-RetainStack uses the **[Online Shoppers Purchasing Intention Dataset](https://archive.ics.uci.edu/ml/datasets/Online+Shoppers+Purchasing+Intention+Dataset)** from the UCI Machine Learning Repository.
+RetainStack uses the [Online Shoppers Purchasing Intention Dataset](https://archive.ics.uci.edu/ml/datasets/Online+Shoppers+Purchasing+Intention+Dataset) from the UCI Machine Learning Repository.
 
 | Property | Details |
 |---|---|
-| **Source** | UCI Machine Learning Repository |
-| **Records** | ~12,330 web sessions |
-| **Task** | Binary Classification |
-| **Target Variable** | `Revenue` — whether the session ended in a purchase (`True`/`False`) |
-| **Domain** | E-commerce / Web Analytics |
+| Source | UCI Machine Learning Repository |
+| Records | ~12,330 sessions |
+| Task | Binary classification |
+| Target | `Revenue` — whether the shopper completed a purchase |
+| Domain | E-commerce / web analytics |
 
-### Features Used
+### Features used
 
 | Feature | Type | Description |
 |---|---|---|
 | `Administrative` | Integer | Number of administrative pages visited |
-| `Administrative_Duration` | Float | Total time spent on administrative pages (seconds) |
-| `Informational_Duration` | Float | Total time spent on informational pages (seconds) |
+| `Administrative_Duration` | Float | Total time spent on administrative pages |
+| `Informational_Duration` | Float | Total time spent on informational pages |
 | `ProductRelated` | Integer | Number of product-related pages visited |
-| `ProductRelated_Duration` | Float | Total time spent on product-related pages (seconds) |
-| `BounceRates` | Float | Average bounce rate of pages visited |
-| `ExitRates` | Float | Average exit rate of pages visited |
-| `PageValues` | Float | Average page value of pages visited before a transaction |
-| `Month` | Categorical | Month of the visit |
-| `Revenue` | Boolean | **Target** — whether a purchase was completed |
+| `ProductRelated_Duration` | Float | Time spent on product-related pages |
+| `BounceRates` | Float | Average bounce rate |
+| `ExitRates` | Float | Average exit rate |
+| `PageValues` | Float | Average page value before conversion |
+| `Month` | Categorical | Month of the session |
+| `Revenue` | Boolean | Target label indicating a purchase |
 
 ---
 
-## Project Structure
+## Repository structure
 
 ```text
 RetainStack/
+├── .github/
+│   └── workflows/            # CI/CD automation
 ├── data/
-│   ├── raw_data.csv           # Source dataset (DVC-tracked)
-│   ├── train_data.csv         # Train split (DVC-tracked)
-│   ├── test_data.csv          # Test split (DVC-tracked)
-│   ├── processed/             # Preprocessed feature/label CSVs
+│   ├── raw_data.csv          # Source dataset (DVC-tracked)
+│   ├── train_data.csv        # Training split (DVC-tracked)
+│   ├── test_data.csv         # Test split (DVC-tracked)
+│   ├── processed/            # Preprocessed feature/label outputs
 │   └── artifact/
-│       ├── preprocessor.skops        # Fitted ColumnTransformer
-│       ├── model.skops               # Trained model
+│       ├── preprocessor.skops
+│       ├── model.skops
 │       ├── evaluation_metrics.json
-│       ├── data_drift_report.html    # Evidently drift report
+│       ├── data_drift_report.html
 │       └── data_drift_report.json
-├── Experiments/               # Exploratory notebooks
+├── Experiments/
 │   ├── data_exploration.ipynb
 │   └── model_training.ipynb
 ├── src/
 │   ├── api/
-│   │   ├── app.py             # FastAPI application factory + lifespan
-│   │   ├── batcher.py         # Server-side dynamic request batcher
-│   │   ├── dependencies.py    # ArtifactContainer, thread-safe ModelStore, hot-reload logic
+│   │   ├── app.py            # FastAPI app factory and lifespan
+│   │   ├── batcher.py        # Dynamic batching logic
+│   │   ├── dependencies.py   # Artifact store and hot-reload implementation
 │   │   ├── routes/
-│   │   │   ├── admin.py       # POST /model/reload — zero-downtime hot-reload
-│   │   │   ├── health.py      # GET /health, /ready
-│   │   │   └── predict.py     # POST /predict, POST /predict/batch
+│   │   │   ├── admin.py      # Model reload endpoint
+│   │   │   ├── health.py     # Health and readiness probes
+│   │   │   └── predict.py    # Prediction endpoints
 │   │   └── schemas/
-│   │       ├── request.py     # Pydantic input validation
-│   │       └── response.py    # Pydantic response models
+│   │       ├── request.py    # Request validation
+│   │       └── response.py   # Response models
 │   ├── logger/
-│   │   └── logger.py          # Rotating file + console logger
-│   ├── config.py              # Centralised configuration (env-overridable)
-│   ├── data_ingestion.py      # Loads raw data and produces train/test splits
-│   ├── data_preprocessing.py  # Feature engineering and scaling
-│   ├── data_drift.py          # Evidently data drift detection and MLflow logging
-│   ├── train.py               # Model training
-│   └── evaluate.py            # Full model evaluation + metric persistence
-├── main.py                    # API server entry point
-├── stress_test.py             # Async stress test for all API endpoints
-├── dvc.yaml                   # DVC pipeline stage definitions
-├── dvc.lock                   # DVC pipeline lock file
-├── params.yaml                # Hyperparameters and feature config
-├── pyproject.toml             # Project metadata and dependencies (uv)
-└── README.md
+│   │   └── logger.py         # Rotating logger
+│   ├── config.py            # Environment-configurable settings
+│   ├── data_ingestion.py    # Data loading and split generation
+│   ├── data_preprocessing.py
+│   ├── data_drift.py        # Drift detection and logging
+│   ├── train.py             # Model training
+│   └── evaluate.py          # Evaluation and metric export
+├── main.py                  # API server entry point
+├── stress_test.py           # Concurrent endpoint validation and load test
+├── dvc.yaml                 # DVC pipeline configuration
+├── dvc.lock                 # Locked dependency graph for the pipeline
+├── params.yaml              # Hyperparameters and feature configuration
+├── pyproject.toml           # Dependencies and package metadata
+├── README.md
+├── setup.py
+├── mlflow.db
+├── logs/
+└── .venv/
 ```
 
 ---
 
-## Setup Instructions
+## Quick start
 
 ### Prerequisites
 
-- Python ≥ 3.11
-- [uv](https://github.com/astral-sh/uv) package manager
-- AWS credentials with read/write access to the DVC S3 remote
+- Python 3.11+
+- [uv](https://github.com/astral-sh/uv)
+- AWS credentials with access to the DVC S3 remote
 
-### Steps
+### 1) Clone and install
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/raogaurav17/RetainStack.git
-   cd RetainStack
-   ```
+```bash
+git clone https://github.com/raogaurav17/RetainStack.git
+cd RetainStack
+uv sync
+```
 
-2. **Create a virtual environment and install dependencies**
-   ```bash
-   uv sync
-   ```
+### 2) Activate the environment
 
-3. **Activate the virtual environment**
-   ```bash
-   source .venv/bin/activate      # Linux / macOS
-   # .venv\Scripts\activate       # Windows
-   ```
+```bash
+source .venv/bin/activate
+# Windows: .venv\Scripts\activate
+```
 
-4. **Pull data and artifacts from the DVC remote**
-   ```bash
-   uv run dvc pull
-   ```
+### 3) Pull tracked data and artifacts
 
----
+```bash
+uv run dvc pull
+```
 
-## Running the Pipeline
+### 4) Run the pipeline
 
-### Option A — DVC (recommended, stage-level caching)
-
-Reproduce only the stages that have changed:
+#### Recommended: run the DVC pipeline
 
 ```bash
 uv run dvc repro
 ```
 
-Force a full re-run:
+To force a full rerun:
 
 ```bash
 uv run dvc repro --force
 ```
 
-### Option B — Run individual stages manually
+#### Alternative: run individual stages
 
 ```bash
 python -m src.data_ingestion
@@ -161,48 +174,36 @@ python -m src.data_drift
 
 ---
 
-## API Server
+## Running the API
 
-RetainStack includes a FastAPI serving layer for real-time purchase-intent predictions.
-
-### Start the server
+Start the service:
 
 ```bash
 uv run python main.py
 ```
 
-Or directly via uvicorn:
+Or run via Uvicorn directly:
 
 ```bash
 uv run uvicorn src.api.app:app --host 127.0.0.1 --port 8000
 ```
 
-Interactive API docs are available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+Open the generated docs at:
 
-### Endpoints
+- [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+
+### Core API endpoints
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/v1/health` | Liveness probe — returns `{"status": "ok"}` |
-| `GET` | `/api/v1/ready` | Readiness probe — confirms model & preprocessor are loaded, exposes artifact version fingerprint and reload count |
-| `POST` | `/api/v1/predict` | Predict purchase intent for a **single** session (dynamically batched) |
-| `POST` | `/api/v1/predict/batch` | Predict purchase intent for **1–500 sessions** in one request |
-| `POST` | `/api/v1/model/reload` | Zero-downtime hot-reload of model & preprocessor artifacts — see [Admin Endpoints](#admin-endpoints) |
+| `GET` | `/api/v1/health` | Liveness probe |
+| `GET` | `/api/v1/ready` | Readiness check confirming the model and preprocessor are loaded |
+| `POST` | `/api/v1/predict` | Score a single session |
+| `POST` | `/api/v1/predict/batch` | Score 1–500 sessions in one request |
+| `POST` | `/api/v1/model/reload` | Swap in a new model/preprocessor pair without dropping in-flight requests |
 
-### Dynamic batching (`/api/v1/predict`)
-
-The single-session endpoint uses **server-side dynamic batching**: rather than running a separate inference pass per request, the server accumulates concurrent requests in an internal queue and flushes them together through the model as a vectorised batch. This is transparent to callers — each request still gets back exactly one result.
-
-A batch is flushed when either condition fires first:
-
-| Condition | Default | Env var |
-|---|---|---|
-| Queue reaches this many requests | `32` | `BATCH_MAX_SIZE` |
-| This many ms have elapsed since the first request joined the batch | `50` | `BATCH_TIMEOUT_MS` |
-
-The `/api/v1/predict/batch` endpoint is **client-driven** and bypasses the internal batcher — it scores all submitted sessions immediately in a single pass.
-
-### Example prediction request
+### Example: single-session prediction
 
 ```bash
 curl -s -X POST http://127.0.0.1:8000/api/v1/predict \
@@ -220,7 +221,7 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/predict \
   }'
 ```
 
-**Response:**
+Sample response:
 
 ```json
 {
@@ -230,83 +231,7 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/predict \
 }
 ```
 
-| Response Field | Description |
-|---|---|
-| `prediction` | `1` = purchase predicted, `0` = no purchase |
-| `purchase_probability` | Model's probability estimate (0–1) |
-| `confidence` | `high` (≥ 0.75), `medium` (≥ 0.40), or `low` (< 0.40) |
-
----
-
-## Admin Endpoints
-
-### Zero-Downtime Model Hot-Reload
-
-After a DVC pipeline re-run produces new `model.skops` and `preprocessor.skops` artifacts, you can load them into the running server **without restarting** and **without dropping any in-flight requests**.
-
-#### How it works — three-phase atomic swap
-
-| Phase | What happens |
-|---|---|
-| **1. Load** | New `.skops` files are deserialised into a candidate `ArtifactContainer` (outside the lock — I/O is slow) |
-| **2. Pre-flight** | A synthetic dry-run inference pass is executed against the candidate to surface schema or compatibility issues before real traffic sees the new model |
-| **3. Swap** | The active artifact pointer is replaced atomically under a `threading.RLock`. In-flight requests always finish against the snapshot they captured at their own start — there is **zero torn-read risk** |
-
-If pre-flight fails, the live model is **never** replaced and the error is returned to the caller.
-
-Each artifact pair is identified by a **12-character SHA-256 fingerprint** computed from the raw bytes of both files. The fingerprint appears in logs, the `/ready` probe, and the reload response.
-
-#### Trigger a hot-reload
-
-```bash
-curl -s -X POST http://127.0.0.1:8000/api/v1/model/reload | python3 -m json.tool
-```
-
-**Response:**
-
-```json
-{
-  "status": "ok",
-  "message": "Model hot-reload successful. Active artifact: 20fc576ceb04 (loaded at 2026-08-18T15:44:40.999861+00:00).",
-  "previous_version": "20fc576ceb04",
-  "new_version": "20fc576ceb04",
-  "reload_count": 1,
-  "preflight_latency_ms": 23.54
-}
-```
-
-| Response Field | Description |
-|---|---|
-| `status` | `ok` on success, `failed` on pre-flight or file error |
-| `previous_version` | SHA-256 fingerprint (12 chars) of the model that was active before reload |
-| `new_version` | SHA-256 fingerprint of the model now active |
-| `reload_count` | Total successful hot-reloads since server start |
-| `preflight_latency_ms` | Wall-clock time taken by the pre-flight dry-run (ms) |
-
-#### Check artifact version via `/ready`
-
-```bash
-curl -s http://127.0.0.1:8000/api/v1/ready | python3 -m json.tool
-```
-
-**Response:**
-
-```json
-{
-  "ready": true,
-  "model_loaded": true,
-  "preprocessor_loaded": true,
-  "artifact_version": "20fc576ceb04",
-  "reload_count": 1,
-  "loaded_at": "2026-08-18T15:44:40.999861+00:00"
-}
-```
-
----
-
-## Batch prediction request
-
-Send up to **500 sessions** in a single call. The response preserves input order.
+### Example: batch prediction
 
 ```bash
 curl -s -X POST http://127.0.0.1:8000/api/v1/predict/batch \
@@ -339,7 +264,7 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/predict/batch \
   }'
 ```
 
-**Response:**
+Sample response:
 
 ```json
 {
@@ -351,55 +276,71 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/predict/batch \
 }
 ```
 
-| Response Field | Description |
-|---|---|
-| `predictions` | Ordered list of results — one entry per input session |
-| `total` | Number of sessions scored in the request |
-| `prediction` | `1` = purchase predicted, `0` = no purchase |
-| `purchase_probability` | Model's probability estimate (0–1) |
-| `confidence` | `high` (≥ 0.75), `medium` (≥ 0.40), or `low` (< 0.40) |
+### Example: hot-reload endpoint
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/v1/model/reload | python3 -m json.tool
+```
+
+Sample response:
+
+```json
+{
+  "status": "ok",
+  "message": "Model hot-reload successful. Active artifact: 20fc576ceb04 (loaded at 2026-08-18T15:44:40.999861+00:00).",
+  "previous_version": "20fc576ceb04",
+  "new_version": "20fc576ceb04",
+  "reload_count": 1,
+  "preflight_latency_ms": 23.54
+}
+```
+
+Check readiness and artifact version:
+
+```bash
+curl -s http://127.0.0.1:8000/api/v1/ready | python3 -m json.tool
+```
 
 ---
 
-## Stress Testing
+## Stress testing
 
-`stress_test.py` is a self-contained async script that exercises every API endpoint under concurrent load and reports per-endpoint latency statistics.
+The repository includes `stress_test.py`, a self-contained async script that exercises the API under load and checks correctness under concurrent traffic.
 
-### Prerequisites
-
-`httpx` is already included in the project venv. `rich` is optional — install it for coloured tables and progress spinners:
+### Install optional support for rich output
 
 ```bash
 uv add rich
 ```
 
-### Run the stress test
-
-Start the API server first, then:
+### Run the default test suite
 
 ```bash
-# Default run — 200 requests per phase, 50 concurrent
 uv run python stress_test.py
+```
 
-# Heavier load with a 30-second throughput burst
+### Example variations
+
+```bash
+# Higher concurrency and throughput burst
 uv run python stress_test.py --total 500 --concurrency 100 --burst-duration 30
 
-# Reproducible run with a fixed random seed
+# Repeatable run with fixed seed
 uv run python stress_test.py --seed 42
 ```
 
-### Test phases
+### Stress test phases
 
-| Phase | Endpoint | What is tested |
+| Phase | Endpoint | What it validates |
 |---|---|---|
-| 1 | `GET /api/v1/health` | Liveness probe under concurrent load |
-| 2 | `GET /api/v1/ready` | Readiness probe — confirms model and preprocessor are loaded |
-| 3 | `POST /api/v1/predict` | Single-session prediction — verifies the dynamic batcher coalesces concurrent requests |
-| 4 | `POST /api/v1/predict/batch` | Batch endpoint swept across configurable batch sizes (default: 1, 10, 50, 100) |
-| 5 | `POST /api/v1/predict/batch` | Maximum-load batch (500 sessions — the API hard cap) |
-| 6 | `POST /api/v1/predict` | Sustained throughput burst — fires requests for a fixed wall-clock duration and reports req/s |
-| 7 | `POST /api/v1/predict` | Pydantic validation — sends five malformed payloads and asserts each returns `HTTP 422` |
-| 8 | `POST /api/v1/predict` + `POST /api/v1/model/reload` | **Concurrent hot-reload safety** — fires N reload calls while 200 concurrent predictions run simultaneously; verifies 0 dropped requests and 100% prediction success rate during atomic pointer swaps |
+| 1 | `GET /api/v1/health` | Liveness under concurrent requests |
+| 2 | `GET /api/v1/ready` | Readiness and service availability |
+| 3 | `POST /api/v1/predict` | Dynamic batching with single-session inference |
+| 4 | `POST /api/v1/predict/batch` | Batch-size sweep |
+| 5 | `POST /api/v1/predict/batch` | Maximum-capacity batch calls |
+| 6 | `POST /api/v1/predict` | Throughput burst testing |
+| 7 | `POST /api/v1/predict` | Input validation and 422 handling |
+| 8 | `POST /api/v1/predict` + `POST /api/v1/model/reload` | Zero-downtime hot-reload safety under concurrent traffic |
 
 ### CLI flags
 
@@ -409,13 +350,13 @@ uv run python stress_test.py --seed 42
 | `--port` | `8000` | API port |
 | `--concurrency` | `50` | Max concurrent in-flight requests |
 | `--total` | `200` | Requests per endpoint phase |
-| `--batch-sizes` | `1 10 50 100` | Batch sizes tested in Phase 4 |
-| `--burst-duration` | `10.0` | Wall-clock seconds for the throughput burst |
-| `--timeout` | `30.0` | Per-request timeout in seconds |
-| `--seed` | — | Random seed for reproducible payloads |
-| `--reload-rounds` | `5` | Number of `POST /api/v1/model/reload` calls fired concurrently during Phase 8 |
+| `--batch-sizes` | `1 10 50 100` | Batch sizes used in the sweep |
+| `--burst-duration` | `10.0` | Duration of the throughput burst |
+| `--timeout` | `30.0` | Per-request timeout |
+| `--seed` | — | Reproducible random seed |
+| `--reload-rounds` | `5` | Number of concurrent reload attempts during the safety phase |
 
-The script exits with code `0` when every non-validation phase achieves ≥ 95% success rate, and `1` otherwise.
+The script exits with code `0` when the non-validation phases achieve at least a 95% success rate and returns `1` otherwise.
 
 ---
 
@@ -423,69 +364,64 @@ The script exits with code `0` when every non-validation phase achieves ≥ 95% 
 
 | File | Purpose |
 |---|---|
-| `params.yaml` | Feature list, categorical features, model hyperparameters |
-| `src/config.py` | Directory paths, split ratios, and batching settings — all overridable via environment variables |
-| `dvc.yaml` | Pipeline stage definitions, dependencies, outputs, and metric declarations |
+| `params.yaml` | Feature list, categorical settings, and model hyperparameters |
+| `src/config.py` | Paths, split ratios, and batching settings |
+| `dvc.yaml` | DVC stage graph and artifact outputs |
 
-### Key Environment Variables
+### Key environment variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATA_DIR` | `data` | Root directory for all data files |
-| `TRAIN_TEST_SPLIT_RATIO` | `0.2` | Fraction of raw data held out as test set |
-| `TRAIN_VAL_SPLIT_RATIO` | `0.2` | Fraction of training data held out as validation set |
-| `LOG_LEVEL` | `DEBUG` | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
-| `LOG_DIR` | `logs` | Directory where log files are written |
-| `BATCH_MAX_SIZE` | `32` | Flush the dynamic batch queue when this many requests are queued |
-| `BATCH_TIMEOUT_MS` | `50` | Flush the dynamic batch queue after this many milliseconds |
+| `DATA_DIR` | `data` | Root directory housing raw and processed datasets |
+| `TRAIN_TEST_SPLIT_RATIO` | `0.2` | Fraction reserved for the test split |
+| `TRAIN_VAL_SPLIT_RATIO` | `0.2` | Fraction reserved for validation during training |
+| `LOG_LEVEL` | `DEBUG` | Logging verbosity |
+| `LOG_DIR` | `logs` | Location for rotating log files |
+| `BATCH_MAX_SIZE` | `32` | Queue flush threshold for batched inference |
+| `BATCH_TIMEOUT_MS` | `50` | Max time to wait before flushing a batch |
 
 ---
 
-## Metrics & Results
+## Metrics and experiment tracking
 
-Evaluation metrics are written to `data/artifact/evaluation_metrics.json` after each pipeline run. View them with:
+Evaluation metrics are written to `data/artifact/evaluation_metrics.json` after each pipeline run.
+
+View DVC metrics:
 
 ```bash
 uv run dvc metrics show
 ```
 
-Compare across experiments or git commits:
+Compare metrics across commits or runs:
 
 ```bash
 uv run dvc metrics diff
 ```
 
-Metrics tracked:
+Tracked metrics include:
 
 | Metric | Description |
 |---|---|
 | `accuracy` | Overall classification accuracy |
-| `precision` | Precision on the positive class |
-| `recall` | Recall on the positive class |
-| `f1` | F1 score (harmonic mean of precision and recall) |
-| `roc_auc` | Area under the ROC curve |
+| `precision` | Positive-class precision |
+| `recall` | Positive-class recall |
+| `f1` | F1 score |
+| `roc_auc` | ROC AUC |
 | `confusion_matrix` | 2×2 confusion matrix |
 
 ### MLflow UI
 
-In addition to DVC metrics, you can visualize all experiments, parameters, and models using the MLflow UI. To launch the UI, run:
+To launch the MLflow dashboard locally:
 
 ```bash
 uv run mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
 
-Navigate to `http://127.0.0.1:5000` in your browser to view the `RetainStack_Experiment` and compare different runs.
+Then open:
 
----
+- `http://127.0.0.1:5000`
 
-## Future Improvements
-- **Hyperparameter tuning** — Automated search with Optuna or scikit-learn `GridSearchCV`
-- **Data validation** — Schema checks on ingested data with `pandera` or `great_expectations`
-- **Drift alerting** — Trigger automated retraining or notifications when drift is detected
-- **Extended feature set** — Evaluate dropped features (`VisitorType`, `Weekend`, `SpecialDay`, etc.)
-- **Rate limiting** — Add `slowapi` middleware to guard prediction endpoints against request flooding
-- **Cloud deployment** — AWS SageMaker or GCP Vertex AI integration
-- **Observability** — Prometheus `/metrics` endpoint with P95/P99 inference latency histograms and Grafana dashboard
+This lets you explore the `RetainStack_Experiment`, compare runs, and inspect model parameters and metrics.
 
 ---
 

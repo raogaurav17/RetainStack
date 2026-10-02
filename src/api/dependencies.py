@@ -41,10 +41,7 @@ from src.logger.logger import get_logger
 logger = get_logger("api.dependencies")
 
 
-# ---------------------------------------------------------------------------
 # Immutable artifact snapshot
-# ---------------------------------------------------------------------------
-
 @dataclass(frozen=True)
 class ArtifactContainer:
     """An immutable, matched pair of model + preprocessor artifacts.
@@ -74,12 +71,10 @@ def _compute_version(model_path: str, preprocessor_path: str) -> str:
     return sha.hexdigest()[:12]
 
 
-# ---------------------------------------------------------------------------
 # Dummy pre-flight payload
 # The feature order and value ranges mirror a valid mid-traffic session so
 # that the dry-run exercises both the preprocessor transform *and* XGBoost
 # predict paths without triggering Pydantic validation.
-# ---------------------------------------------------------------------------
 _PREFLIGHT_ROW = {
     "Administrative": 1,
     "Administrative_Duration": 10.0,
@@ -97,10 +92,8 @@ class ArtifactReloadError(RuntimeError):
     """Raised when a hot-reload attempt fails pre-flight validation."""
 
 
-# ---------------------------------------------------------------------------
-# Thread-safe model store
-# ---------------------------------------------------------------------------
 
+# Thread-safe model store
 class ModelStore:
     """Thread-safe store for the active (model, preprocessor) artifact pair.
 
@@ -115,10 +108,8 @@ class ModelStore:
         self._lock = threading.RLock()
         self._reload_count: int = 0
 
-    # ------------------------------------------------------------------
-    # Public read interface
-    # ------------------------------------------------------------------
 
+    # Public read interface
     @property
     def is_ready(self) -> bool:
         """``True`` if at least one artifact pair has been loaded successfully."""
@@ -144,10 +135,8 @@ class ModelStore:
         with self._lock:
             return self._reload_count
 
-    # ------------------------------------------------------------------
-    # Startup load
-    # ------------------------------------------------------------------
 
+    # Startup load
     def load(self) -> None:
         """Load artifacts on startup — identical to a first-time reload."""
         container, _ = self._load_candidate()
@@ -160,10 +149,7 @@ class ModelStore:
             container.loaded_at,
         )
 
-    # ------------------------------------------------------------------
     # Hot-reload (atomic pointer swap with pre-flight)
-    # ------------------------------------------------------------------
-
     def reload(self) -> tuple[ArtifactContainer | None, ArtifactContainer, float]:
         """Hot-reload artifacts without interrupting in-flight requests.
 
@@ -200,10 +186,8 @@ class ModelStore:
         )
         return old_container, candidate, preflight_latency_ms
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
 
+    # Internal helpers
     def _load_candidate(self) -> tuple[ArtifactContainer, float]:
         """Deserialise skops files and validate with a pre-flight dry run.
 
@@ -280,10 +264,7 @@ class ModelStore:
         return elapsed_ms
 
 
-# ---------------------------------------------------------------------------
 # Singleton & FastAPI dependency
-# ---------------------------------------------------------------------------
-
 _store = ModelStore()
 
 
